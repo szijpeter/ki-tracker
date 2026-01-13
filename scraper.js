@@ -16,7 +16,7 @@ const AJAX_URL = `${BASE_URL}/wp-admin/admin-ajax.php`;
 async function extractNonce() {
   const response = await fetch(MAIN_PAGE, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; KI-Tracker/1.0)',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html',
     }
   });
@@ -52,7 +52,7 @@ async function fetchOccupancyData(nonce) {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       'X-Requested-With': 'XMLHttpRequest',
-      'User-Agent': 'Mozilla/5.0 (compatible; KI-Tracker/1.0)',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     },
     body: params.toString()
   });

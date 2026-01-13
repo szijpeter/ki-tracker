@@ -33,38 +33,68 @@ function pruneOldData(data, maxDays) {
     return data.filter(entry => new Date(entry.timestamp) > cutoff);
 }
 
+const STATUS_FILE = './data/status.json';
+
 /**
  * Main collection function
  */
 async function collect() {
     console.log(`[${new Date().toISOString()}] Starting data collection...`);
+    const status = {
+        lastRun: new Date().toISOString(),
+        success: false,
+        message: '',
+        data: null
+    };
 
-    // Scrape current data
-    const currentData = await scrapeOccupancy();
-    console.log(`Scraped: Lead ${currentData.lead}%, Boulder ${currentData.boulder}%`);
+    try {
+        // Scrape current data
+        const currentData = await scrapeOccupancy();
+        console.log(`Scraped: Lead ${currentData.lead}%, Boulder ${currentData.boulder}%`);
 
-    // Read existing history
-    let history = await readHistory();
-    console.log(`Existing entries: ${history.length}`);
+        // Read existing history
+        let history = await readHistory();
+        console.log(`Existing entries: ${history.length}`);
 
-    // Append new data
-    history.push(currentData);
+        // Append new data
+        history.push(currentData);
 
-    // Prune old entries
-    history = pruneOldData(history, MAX_DAYS);
-    console.log(`After pruning: ${history.length} entries`);
+        // Prune old entries
+        history = pruneOldData(history, MAX_DAYS);
+        console.log(`After pruning: ${history.length} entries`);
 
-    // Ensure data directory exists
-    const dir = dirname(DATA_FILE);
-    if (!existsSync(dir)) {
-        await mkdir(dir, { recursive: true });
+        // Ensure data directory exists
+        const dir = dirname(DATA_FILE);
+        if (!existsSync(dir)) {
+            await mkdir(dir, { recursive: true });
+        }
+
+        // Write updated history
+        await writeFile(DATA_FILE, JSON.stringify(history, null, 2));
+
+        // Update status
+        status.success = true;
+        status.message = 'Collection successful';
+        status.data = {
+            lead: currentData.lead,
+            boulder: currentData.boulder,
+            overall: currentData.overall
+        };
+        console.log('Data collection complete!');
+
+        return currentData;
+
+    } catch (error) {
+        status.message = error.message;
+        throw error;
+    } finally {
+        // Always write status file
+        try {
+            await writeFile(STATUS_FILE, JSON.stringify(status, null, 2));
+        } catch (err) {
+            console.error('Failed to write status file:', err);
+        }
     }
-
-    // Write updated history
-    await writeFile(DATA_FILE, JSON.stringify(history, null, 2));
-    console.log('Data collection complete!');
-
-    return currentData;
 }
 
 // Run collection
@@ -72,5 +102,7 @@ try {
     await collect();
 } catch (error) {
     console.error('Collection failed:', error.message);
-    process.exit(1);
+    // We don't exit with 1 here anymore so that the workflow continues to the commit step
+    // The error is recorded in status.json
+    process.exit(0);
 }

@@ -23,20 +23,27 @@ const filterBtns = document.querySelectorAll('.filter-btn');
  */
 async function fetchData() {
     try {
-        const response = await fetch('./data/history.json?' + Date.now());
-        if (!response.ok) throw new Error('Failed to fetch data');
-        historyData = await response.json();
-        return historyData;
+        const [historyResponse, statusResponse] = await Promise.all([
+            fetch('./data/history.json?' + Date.now()),
+            fetch('./data/status.json?' + Date.now()).catch(() => ({ ok: false }))
+        ]);
+
+        if (!historyResponse.ok) throw new Error('Failed to fetch data');
+
+        historyData = await historyResponse.json();
+        const statusData = statusResponse.ok ? await statusResponse.json() : null;
+
+        return { history: historyData, status: statusData };
     } catch (error) {
         console.error('Error fetching data:', error);
-        return [];
+        return { history: [], status: null };
     }
 }
 
 /**
  * Updates the current status cards with the latest data
  */
-function updateCurrentStatus(data) {
+function updateCurrentStatus(data, status) {
     if (!data || data.length === 0) {
         leadValue.textContent = '--';
         boulderValue.textContent = '--';
@@ -54,17 +61,24 @@ function updateCurrentStatus(data) {
     leadProgress.style.width = `${latest.lead ?? 0}%`;
     boulderProgress.style.width = `${latest.boulder ?? 0}%`;
 
-    // Update timestamp
-    const timestamp = new Date(latest.timestamp);
-    const now = new Date();
-    const diffMinutes = Math.floor((now - timestamp) / 60000);
-
-    if (diffMinutes < 1) {
-        lastUpdatedEl.textContent = 'Updated just now';
-    } else if (diffMinutes < 60) {
-        lastUpdatedEl.textContent = `Updated ${diffMinutes} min ago`;
+    // Update status text
+    if (status && !status.success) {
+        lastUpdatedEl.textContent = `Error: ${status.message || 'Collection failed'}`;
+        lastUpdatedEl.style.color = '#ef4444'; // Red color for error
     } else {
-        lastUpdatedEl.textContent = `Updated at ${timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        lastUpdatedEl.style.color = ''; // Reset color
+
+        // Use status timestamp if available, otherwise use data timestamp
+        const lastRun = status ? new Date(status.lastRun) : timestamp;
+        const diffMinutes = Math.floor((now - lastRun) / 60000);
+
+        if (diffMinutes < 1) {
+            lastUpdatedEl.textContent = 'Updated just now';
+        } else if (diffMinutes < 60) {
+            lastUpdatedEl.textContent = `Updated ${diffMinutes} min ago`;
+        } else {
+            lastUpdatedEl.textContent = `Updated at ${lastRun.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
     }
 }
 
@@ -278,10 +292,10 @@ function updateBestTimes(data) {
 async function refresh() {
     refreshBtn.classList.add('loading');
 
-    const data = await fetchData();
-    updateCurrentStatus(data);
-    updateChart(data);
-    updateBestTimes(data);
+    const result = await fetchData();
+    updateCurrentStatus(result.history, result.status);
+    updateChart(result.history);
+    updateBestTimes(result.history);
 
     setTimeout(() => {
         refreshBtn.classList.remove('loading');

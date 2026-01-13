@@ -5,5 +5,19 @@
     "boulder": 29,
     "overall": 28,
     "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-13T15:33:03.372Z",
+    "lead": 42,
+    "boulder": 48,
+    "overall": 45,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-13T15:45:44.515Z",
+    "lead": 48,
+    "boulder": 56,
+    "overall": 52,
+    "openSectors": null
   }
 ]
