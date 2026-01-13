@@ -1,0 +1,17 @@
+{
+  "name": "ki-tracker",
+  "version": "1.0.0",
+  "description": "Occupancy tracker for Kletterzentrum Innsbruck climbing gym",
+  "type": "module",
+  "scripts": {
+    "scrape": "node scraper.js",
+    "collect": "node collect.js",
+    "serve": "npx http-server . -p 8080 -c-1"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

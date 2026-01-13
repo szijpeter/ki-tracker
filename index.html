@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KI Tracker - Kletterzentrum Innsbruck Occupancy</title>
+  <meta name="description" content="Live occupancy tracker for Kletterzentrum Innsbruck climbing gym. See how busy it is before you go!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🧗 KI Tracker</h1>
+      <p class="subtitle">Kletterzentrum Innsbruck</p>
+    </header>
+
+    <!-- Current Status Cards -->
+    <section class="current-status">
+      <div class="status-card lead">
+        <span class="label">Lead</span>
+        <span class="value" id="lead-value">--</span>
+        <span class="unit">%</span>
+        <div class="progress-bar">
+          <div class="progress-fill" id="lead-progress"></div>
+        </div>
+      </div>
+      
+      <div class="status-card boulder">
+        <span class="label">Boulder</span>
+        <span class="value" id="boulder-value">--</span>
+        <span class="unit">%</span>
+        <div class="progress-bar">
+          <div class="progress-fill" id="boulder-progress"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Last Updated -->
+    <div class="last-updated">
+      <span id="last-updated">Loading...</span>
+      <button class="refresh-btn" id="refresh-btn" title="Refresh data">↻</button>
+    </div>
+
+    <!-- Time Filter -->
+    <section class="time-filter">
+      <button class="filter-btn active" data-range="today">Today</button>
+      <button class="filter-btn" data-range="24h">24 Hours</button>
+      <button class="filter-btn" data-range="7d">7 Days</button>
+    </section>
+
+    <!-- Chart -->
+    <section class="chart-container">
+      <canvas id="occupancy-chart"></canvas>
+    </section>
+
+    <!-- Best Times -->
+    <section class="best-times" id="best-times">
+      <h2>🎯 Best Times to Visit</h2>
+      <div class="times-grid" id="times-grid">
+        <!-- Populated by JavaScript -->
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Data refreshes every 5 minutes</p>
+      <a href="https://www.kletterzentrum-innsbruck.at/en/" target="_blank" rel="noopener">Visit KI Website →</a>
+    </footer>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
