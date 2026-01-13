@@ -1,10 +1,10 @@
 {
-  "lastRun": "2026-01-13T19:19:17.144Z",
+  "lastRun": "2026-01-13T19:37:05.832Z",
   "success": true,
   "message": "Collection successful",
   "data": {
-    "lead": 64,
-    "boulder": 93,
-    "overall": 79
+    "lead": 60,
+    "boulder": 86,
+    "overall": 73
   }
 }
