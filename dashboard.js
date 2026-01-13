@@ -1,3 +1,4 @@
+/* global Chart */
 /**
  * KI Tracker Dashboard
  * Fetches data, renders charts, and provides interactive features
@@ -69,7 +70,8 @@ function updateCurrentStatus(data, status) {
         lastUpdatedEl.style.color = ''; // Reset color
 
         // Use status timestamp if available, otherwise use data timestamp
-        const lastRun = status ? new Date(status.lastRun) : timestamp;
+        const lastRun = status ? new Date(status.lastRun) : new Date(latest.timestamp);
+        const now = new Date();
         const diffMinutes = Math.floor((now - lastRun) / 60000);
 
         if (diffMinutes < 1) {

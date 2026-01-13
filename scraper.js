@@ -14,27 +14,40 @@ const AJAX_URL = `${BASE_URL}/wp-admin/admin-ajax.php`;
  * @returns {Promise<string>} The nonce token
  */
 async function extractNonce() {
-  const response = await fetch(MAIN_PAGE, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html',
+  /* eslint-disable no-undef */
+  // Add AbortController support for Node 16+ (global in 18+)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+  try {
+    const response = await fetch(MAIN_PAGE, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch main page: ${response.status}`);
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch main page: ${response.status}`);
+    const html = await response.text();
+
+    // Look for ki_ajax object in the page's JavaScript
+    const nonceMatch = html.match(
+      /ki_ajax\s*=\s*\{[^}]*nonce["']?\s*:\s*["']([^"']+)["']/
+    );
+
+    if (!nonceMatch) {
+      throw new Error('Could not find nonce token in page');
+    }
+
+    return nonceMatch[1];
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const html = await response.text();
-
-  // Look for ki_ajax object in the page's JavaScript
-  const nonceMatch = html.match(/ki_ajax\s*=\s*\{[^}]*nonce["']?\s*:\s*["']([^"']+)["']/);
-
-  if (!nonceMatch) {
-    throw new Error('Could not find nonce token in page');
-  }
-
-  return nonceMatch[1];
 }
 
 /**
@@ -43,25 +56,34 @@ async function extractNonce() {
  * @returns {Promise<string>} The HTML response
  */
 async function fetchOccupancyData(nonce) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
   const params = new URLSearchParams();
   params.append('action', 'ki_get_opening_hours_desktop');
   params.append('nonce', nonce);
 
-  const response = await fetch(AJAX_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      'X-Requested-With': 'XMLHttpRequest',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    },
-    body: params.toString()
-  });
+  try {
+    const response = await fetch(AJAX_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      body: params.toString(),
+    });
 
-  if (!response.ok) {
-    throw new Error(`AJAX request failed: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`AJAX request failed: ${response.status}`);
+    }
+
+    return response.text();
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return response.text();
 }
 
 /**
@@ -69,7 +91,7 @@ async function fetchOccupancyData(nonce) {
  * @param {string} html - The HTML response from the AJAX call
  * @returns {Object} Parsed occupancy data
  */
-function parseOccupancyData(html) {
+export function parseOccupancyData(html) {
   const $ = cheerio.load(html);
 
   const result = {
@@ -142,9 +164,13 @@ export async function scrapeOccupancy() {
   const html = await fetchOccupancyData(nonce);
   const data = parseOccupancyData(html);
 
+  if (data.lead === null && data.boulder === null) {
+    throw new Error('Failed to parse occupancy data: No known selectors matched');
+  }
+
   return {
     timestamp: new Date().toISOString(),
-    ...data
+    ...data,
   };
 }
 

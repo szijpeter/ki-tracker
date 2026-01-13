@@ -6,12 +6,23 @@
   "scripts": {
     "scrape": "node scraper.js",
     "collect": "node collect.js",
-    "serve": "npx http-server . -p 8080 -c-1"
+    "serve": "npx http-server . -p 8080 -c-1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "test": "node --test"
   },
   "dependencies": {
     "cheerio": "^1.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.0.0",
+    "prettier": "^3.7.4"
   }
 }
