@@ -51,9 +51,51 @@ const STATUS_FILE = './data/status.json';
  */
 export async function collect() {
     console.log(`[${new Date().toISOString()}] Starting data collection...`);
-    const status = {
-        // ...
-        // ...
+
+    try {
+        // 1. Get existing history
+        const history = await readHistory();
+
+        // 2. Scrape new data
+        const newData = await scrapeOccupancy();
+        console.log('Scraped data:', JSON.stringify(newData));
+
+        // 3. Append and prune
+        history.push(newData);
+        const prunedHistory = pruneOldData(history, MAX_DAYS);
+
+        // 4. Save history
+        await writeFile(DATA_FILE, JSON.stringify(prunedHistory, null, 2));
+        console.log(`Updated history with ${prunedHistory.length} entries`);
+
+        // 5. Update status
+        const status = {
+            lastRun: new Date().toISOString(),
+            success: true,
+            message: 'Collection successful',
+            data: newData
+        };
+        await writeFile(STATUS_FILE, JSON.stringify(status, null, 2));
+        console.log('Status updated');
+
+    } catch (error) {
+        console.error('Collection process failed:', error);
+
+        // Update status with error
+        const status = {
+            lastRun: new Date().toISOString(),
+            success: false,
+            message: error.message,
+            error: error.stack
+        };
+
+        try {
+            await writeFile(STATUS_FILE, JSON.stringify(status, null, 2));
+        } catch (writeError) {
+            console.error('Failed to write failure status:', writeError);
+        }
+
+        throw error; // Re-throw to ensure process exit code 1
     }
 }
 
