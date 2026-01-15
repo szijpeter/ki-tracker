@@ -119,6 +119,22 @@
     "openSectors": null
   },
   {
+    "timestamp": "2026-01-13T22:00:43.311Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0",
+    "backfilled": true
+  },
+  {
+    "timestamp": "2026-01-14T09:13:20.938Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0",
+    "backfilled": true
+  },
+  {
     "timestamp": "2026-01-14T09:23:20.938Z",
     "lead": 26,
     "boulder": 28,
@@ -292,6 +308,22 @@
     "boulder": 65,
     "overall": 37,
     "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-14T21:05:09.917Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0",
+    "backfilled": true
+  },
+  {
+    "timestamp": "2026-01-15T08:32:47.796Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0",
+    "backfilled": true
   },
   {
     "timestamp": "2026-01-15T08:42:47.796Z",

@@ -132,12 +132,49 @@ function updateChart(data) {
     const leadData = filteredData.map(d => d.lead);
     const boulderData = filteredData.map(d => d.boulder);
 
+    // Determine axis bounds for 'today' to shrink the closed period
+    let minTime, maxTime;
+    if (currentRange === 'today') {
+        const now = new Date();
+        minTime = new Date(now);
+        minTime.setHours(6, 0, 0, 0); // Start at 06:00
+        maxTime = new Date(now);
+        maxTime.setHours(23, 0, 0, 0); // End at 23:00
+
+        // VISUALIZATION FIX:
+        // Ensure the graph starts at 0 if the first data point is later than 06:00
+        // by injecting a 0 point at minTime and just before the first real point.
+        if (filteredData.length > 0) {
+            const firstTime = new Date(filteredData[0].timestamp);
+            if (firstTime > minTime) {
+                // Add point at 06:00
+                labels.unshift(minTime);
+                leadData.unshift(0);
+                boulderData.unshift(0);
+
+                // Add point just before first data (to create step up)
+                const preFirst = new Date(firstTime - 60000); // 1 min before
+                if (preFirst > minTime) {
+                    labels.splice(1, 0, preFirst);
+                    leadData.splice(1, 0, 0);
+                    boulderData.splice(1, 0, 0);
+                }
+            }
+        }
+    }
+
     const ctx = document.getElementById('occupancy-chart').getContext('2d');
 
     if (chart) {
         chart.data.labels = labels;
         chart.data.datasets[0].data = leadData;
         chart.data.datasets[1].data = boulderData;
+
+        // Update scales
+        chart.options.scales.x.time.unit = currentRange === '7d' ? 'day' : 'hour';
+        chart.options.scales.x.min = minTime;
+        chart.options.scales.x.max = maxTime;
+
         chart.update('none');
     } else {
         chart = new Chart(ctx, {
@@ -204,6 +241,8 @@ function updateChart(data) {
                 scales: {
                     x: {
                         type: 'time',
+                        min: minTime,
+                        max: maxTime,
                         time: {
                             unit: currentRange === '7d' ? 'day' : 'hour',
                             displayFormats: {
