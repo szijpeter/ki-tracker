@@ -1,126 +1,82 @@
-# KI Tracker 🧗
+# KI Tracker
 
-Live occupancy tracker for **Kletterzentrum Innsbruck** climbing gym.
+Live occupancy tracker for Kletterzentrum Innsbruck. Check how busy the gym is before heading over.
 
-![Dashboard Preview](https://img.shields.io/badge/status-active-success)
+**[→ View live dashboard](https://szijpeter.github.io/ki-tracker/)**
 
-## Features
+## How it works
 
-- 📊 **Real-time occupancy** - See current Lead & Boulder utilization
-- 📈 **Historical charts** - Track patterns over time (today, 24h, 7 days)
-- 🎯 **Best times** - AI-analyzed optimal visiting hours
-- 📱 **Mobile-first** - Designed for phone viewing
-- 🆓 **100% Free** - Runs entirely on GitHub infrastructure
-
-## How It Works
+A GitHub Action runs every 5 minutes, scrapes the occupancy data from the KI website, and stores it in `data/history.json`. The dashboard is a static page served via GitHub Pages that reads this JSON and renders charts. Zero servers, zero cost.
 
 ```
-GitHub Actions (every 5 min) → Scrapes KI Website → Stores data in JSON → GitHub Pages serves dashboard
+GitHub Actions → scrapes KI → commits to repo → GitHub Pages serves dashboard
 ```
 
-1. A scheduled GitHub Action runs every 5 minutes
-2. It scrapes the live occupancy data from [kletterzentrum-innsbruck.at](https://www.kletterzentrum-innsbruck.at/en/)
-3. Data is appended to `data/history.json` (keeps 7 days)
-4. The static dashboard (GitHub Pages) reads and visualizes the data
-
-## Setup
-
-### 1. Fork or Clone
-
-```bash
-git clone https://github.com/YOUR_USERNAME/ki-tracker.git
-cd ki-tracker
-```
-
-### 2. Install Dependencies (for local testing)
+## Local development
 
 ```bash
 npm install
+npm run scrape   # test the scraper
+npm run collect  # run full collection
+npm run serve    # start local server at http://localhost:8080
 ```
 
-### 3. Test Locally
+Other scripts: `npm run lint`, `npm run format`, `npm test`
 
-```bash
-# Test the scraper
-npm run scrape
-
-# Run data collection
-npm run collect
-
-# Start local dashboard
-npm run serve
-# Open http://localhost:8080
-```
-
-### 4. Deploy to GitHub
-
-```bash
-git add .
-git commit -m "Initial commit"
-git push origin main
-```
-
-### 5. Enable GitHub Pages
-
-1. Go to your repo **Settings** → **Pages**
-2. Set **Source** to "Deploy from a branch"
-3. Select **Branch**: `main` / **Folder**: `/ (root)`
-4. Click **Save**
-
-Your dashboard will be live at:
-```
-https://YOUR_USERNAME.github.io/ki-tracker/
-```
-
-### 6. Verify Actions
-
-1. Go to the **Actions** tab
-2. You should see the "Collect Occupancy Data" workflow
-3. It will run automatically every 5 minutes
-4. You can also trigger it manually with "Run workflow"
-
-## Project Structure
+## Project structure
 
 ```
-ki-tracker/
-├── .github/
-│   └── workflows/
-│       └── collect.yml      # Scheduled data collection
+├── collect.js       # data collection + gym hours logic
+├── scraper.js       # fetches & parses KI website
+├── dashboard.js     # frontend chart rendering
+├── index.html       # dashboard page
+├── style.css
 ├── data/
-│   └── history.json         # Historical occupancy data
-├── collect.js               # Data collection script
-├── scraper.js               # Website scraping module
-├── index.html               # Dashboard HTML
-├── style.css                # Dashboard styles
-├── dashboard.js             # Dashboard JavaScript
-└── package.json             # Node.js dependencies
+│   ├── history.json # 7 days of occupancy data
+│   └── status.json  # last run info
+└── test/            # unit tests
 ```
+
+## Deploy your own
+
+1. Fork this repo
+2. Enable GitHub Pages (Settings → Pages → Deploy from branch `main`)
+3. The Action runs automatically and populates the data
+4. Your dashboard: `https://YOUR_USERNAME.github.io/ki-tracker/`
 
 ## Configuration
 
-### Change Polling Frequency
-
-Edit `.github/workflows/collect.yml`:
+**Polling frequency** — edit `.github/workflows/collect.yml`:
 ```yaml
 schedule:
-  - cron: '*/10 * * * *'  # Every 10 minutes
+  - cron: '*/10 * * * *'  # every 10 min
 ```
 
-### Adjust Data Retention
-
-Edit `collect.js`:
+**Data retention** — edit `collect.js`:
 ```javascript
-const MAX_DAYS = 14; // Keep 14 days of data
+const MAX_DAYS = 14;
 ```
 
-## Privacy & Terms
+**Gym hours** are configured in `collect.js`. The scraper skips polling when closed and records zero occupancy.
 
-This tool scrapes publicly available data from the KI website for personal use. Please be respectful of their servers and don't decrease the polling interval below 5 minutes.
+## Data format
 
-## License
+```json
+{
+  "timestamp": "2026-01-18T10:05:00.000Z",
+  "lead": 45,
+  "boulder": 62,
+  "overall": 54,
+  "openSectors": "29/31"
+}
+```
 
-MIT - Feel free to use and modify!
+## Notes
+
+- Scrapes publicly available data for personal use
+- Don't poll more than every 5 minutes
+- Not affiliated with Kletterzentrum Innsbruck
 
 ---
 
-Made with ❤️ for the climbing community
+MIT License
