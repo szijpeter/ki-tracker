@@ -478,5 +478,446 @@
     "boulder": 59,
     "overall": 44,
     "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-15T20:37:30.587Z",
+    "lead": 14,
+    "boulder": 47,
+    "overall": 31,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-15T20:56:36.758Z",
+    "lead": 5,
+    "boulder": 33,
+    "overall": 19,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-15T22:13:35.395Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0"
+  },
+  {
+    "timestamp": "2026-01-16T09:01:31.982Z",
+    "lead": 17,
+    "boulder": 33,
+    "overall": 25,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T09:37:57.342Z",
+    "lead": 22,
+    "boulder": 35,
+    "overall": 29,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T09:55:49.767Z",
+    "lead": 25,
+    "boulder": 36,
+    "overall": 31,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T10:34:47.815Z",
+    "lead": 20,
+    "boulder": 34,
+    "overall": 27,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T10:55:03.241Z",
+    "lead": 21,
+    "boulder": 33,
+    "overall": 27,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T11:26:33.610Z",
+    "lead": 19,
+    "boulder": 36,
+    "overall": 28,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T11:45:45.736Z",
+    "lead": 21,
+    "boulder": 26,
+    "overall": 24,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T11:58:36.531Z",
+    "lead": 21,
+    "boulder": 26,
+    "overall": 24,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T13:03:39.193Z",
+    "lead": 30,
+    "boulder": 27,
+    "overall": 29,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T13:48:45.489Z",
+    "lead": 35,
+    "boulder": 47,
+    "overall": 41,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T14:15:01.770Z",
+    "lead": 46,
+    "boulder": 55,
+    "overall": 51,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T14:45:10.787Z",
+    "lead": 56,
+    "boulder": 47,
+    "overall": 52,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T15:01:25.207Z",
+    "lead": 50,
+    "boulder": 43,
+    "overall": 47,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T15:35:45.853Z",
+    "lead": 61,
+    "boulder": 37,
+    "overall": 49,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T15:54:53.291Z",
+    "lead": 58,
+    "boulder": 41,
+    "overall": 50,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T16:37:58.288Z",
+    "lead": 56,
+    "boulder": 55,
+    "overall": 56,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T17:01:12.254Z",
+    "lead": 51,
+    "boulder": 51,
+    "overall": 51,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T17:36:06.030Z",
+    "lead": 54,
+    "boulder": 49,
+    "overall": 52,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T17:54:39.205Z",
+    "lead": 50,
+    "boulder": 51,
+    "overall": 51,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T18:41:08.361Z",
+    "lead": 42,
+    "boulder": 68,
+    "overall": 55,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T19:02:12.422Z",
+    "lead": 39,
+    "boulder": 57,
+    "overall": 48,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T19:27:25.927Z",
+    "lead": 34,
+    "boulder": 53,
+    "overall": 44,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T19:42:19.395Z",
+    "lead": 32,
+    "boulder": 46,
+    "overall": 39,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T19:55:51.175Z",
+    "lead": 27,
+    "boulder": 46,
+    "overall": 37,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T20:30:47.593Z",
+    "lead": 20,
+    "boulder": 19,
+    "overall": 20,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T20:49:16.416Z",
+    "lead": 14,
+    "boulder": 11,
+    "overall": 13,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-16T22:19:11.919Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0"
+  },
+  {
+    "timestamp": "2026-01-17T09:28:31.507Z",
+    "lead": 27,
+    "boulder": 23,
+    "overall": 25,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T09:45:31.854Z",
+    "lead": 35,
+    "boulder": 26,
+    "overall": 31,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T09:58:21.385Z",
+    "lead": 35,
+    "boulder": 26,
+    "overall": 31,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T10:31:57.060Z",
+    "lead": 41,
+    "boulder": 37,
+    "overall": 39,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T10:49:34.038Z",
+    "lead": 36,
+    "boulder": 43,
+    "overall": 40,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T11:11:25.170Z",
+    "lead": 39,
+    "boulder": 37,
+    "overall": 38,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T11:30:36.096Z",
+    "lead": 41,
+    "boulder": 33,
+    "overall": 37,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T11:44:55.519Z",
+    "lead": 41,
+    "boulder": 33,
+    "overall": 37,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T11:57:51.012Z",
+    "lead": 36,
+    "boulder": 39,
+    "overall": 38,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T12:56:55.044Z",
+    "lead": 48,
+    "boulder": 47,
+    "overall": 48,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T13:35:09.931Z",
+    "lead": 35,
+    "boulder": 59,
+    "overall": 47,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T13:51:27.927Z",
+    "lead": 32,
+    "boulder": 59,
+    "overall": 46,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T14:16:59.080Z",
+    "lead": 40,
+    "boulder": 60,
+    "overall": 50,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T14:39:13.129Z",
+    "lead": 42,
+    "boulder": 59,
+    "overall": 51,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T14:52:57.576Z",
+    "lead": 45,
+    "boulder": 63,
+    "overall": 54,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T15:21:00.399Z",
+    "lead": 41,
+    "boulder": 71,
+    "overall": 56,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T15:39:45.389Z",
+    "lead": 42,
+    "boulder": 74,
+    "overall": 58,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T15:52:55.296Z",
+    "lead": 36,
+    "boulder": 78,
+    "overall": 57,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T16:25:01.941Z",
+    "lead": 38,
+    "boulder": 58,
+    "overall": 48,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T16:47:32.570Z",
+    "lead": 36,
+    "boulder": 43,
+    "overall": 40,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T17:00:43.073Z",
+    "lead": 35,
+    "boulder": 45,
+    "overall": 40,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T17:28:08.726Z",
+    "lead": 33,
+    "boulder": 50,
+    "overall": 42,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T17:44:15.950Z",
+    "lead": 23,
+    "boulder": 47,
+    "overall": 35,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T17:57:29.805Z",
+    "lead": 20,
+    "boulder": 50,
+    "overall": 35,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T18:39:31.539Z",
+    "lead": 24,
+    "boulder": 46,
+    "overall": 35,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T18:57:18.260Z",
+    "lead": 23,
+    "boulder": 41,
+    "overall": 32,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T19:23:03.097Z",
+    "lead": 16,
+    "boulder": 37,
+    "overall": 27,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T19:37:53.000Z",
+    "lead": 15,
+    "boulder": 33,
+    "overall": 24,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T19:50:53.301Z",
+    "lead": 12,
+    "boulder": 31,
+    "overall": 22,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T20:18:07.768Z",
+    "lead": 7,
+    "boulder": 28,
+    "overall": 18,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T20:40:17.414Z",
+    "lead": 5,
+    "boulder": 23,
+    "overall": 14,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T20:54:12.858Z",
+    "lead": 3,
+    "boulder": 18,
+    "overall": 11,
+    "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-17T22:19:15.807Z",
+    "lead": 0,
+    "boulder": 0,
+    "overall": 0,
+    "openSectors": "0/0"
   }
 ]
