@@ -1,12 +1,12 @@
 {
-  "lastRun": "2026-01-16T22:19:11.920Z",
+  "lastRun": "2026-01-17T09:28:31.509Z",
   "success": true,
-  "message": "Gym closed (0 recorded)",
+  "message": "Collection successful",
   "data": {
-    "timestamp": "2026-01-16T22:19:11.919Z",
-    "lead": 0,
-    "boulder": 0,
-    "overall": 0,
-    "openSectors": "0/0"
+    "timestamp": "2026-01-17T09:28:31.507Z",
+    "lead": 27,
+    "boulder": 23,
+    "overall": 25,
+    "openSectors": null
   }
 }
