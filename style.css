@@ -8,7 +8,7 @@
   --bg-secondary: #1a1a24;
   --bg-card: #24243a;
   --bg-card-hover: #2e2e4a;
-  
+
   /* Accent Colors */
   --accent-lead: #6366f1;
   --accent-lead-light: #818cf8;
@@ -17,37 +17,37 @@
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
-  
+
   /* Text Colors */
   --text-primary: #ffffff;
   --text-secondary: #a1a1b5;
   --text-muted: #6b6b80;
-  
+
   /* Gradients */
   --gradient-lead: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   --gradient-boulder: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
   --gradient-card: linear-gradient(145deg, #24243a 0%, #1a1a24 100%);
-  
+
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow-lead: 0 0 30px rgba(99, 102, 241, 0.3);
   --shadow-glow-boulder: 0 0 30px rgba(245, 158, 11, 0.3);
-  
+
   /* Spacing */
   --spacing-xs: 0.5rem;
   --spacing-sm: 0.75rem;
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
-  
+
   /* Border Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -58,7 +58,9 @@
    Base Styles
    ========================================== */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -254,8 +256,13 @@ body {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================
@@ -310,6 +317,67 @@ body {
 #occupancy-chart {
   width: 100%;
   height: 250px;
+}
+
+/* Multi-chart Layouts */
+.charts-container {
+  background: var(--gradient-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.charts-container.two-day {
+  flex-direction: row;
+}
+
+.charts-container.week {
+  flex-direction: column;
+}
+
+/* Individual Chart Wrapper */
+.day-chart-wrapper {
+  background: rgba(255, 255, 255, 0.03);
+  /* Subtle background for each day */
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+  /* Prevent flex overflow */
+  position: relative;
+}
+
+.day-chart-wrapper .date-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+  font-size: 0.9rem;
+  padding-left: var(--spacing-xs);
+}
+
+/* Chart Canvas Sizing */
+.day-chart-wrapper canvas {
+  width: 100% !important;
+  height: 250px !important;
+  /* Default height for single day */
+}
+
+.charts-container.week .day-chart-wrapper canvas {
+  height: 120px !important;
+}
+
+.charts-container.two-day .day-chart-wrapper canvas {
+  height: 200px !important;
+}
+
+@media (max-width: 600px) {
+  .charts-container.two-day {
+    flex-direction: column;
+  }
 }
 
 /* ==========================================
@@ -396,7 +464,7 @@ body {
   .status-card .value {
     font-size: 2.5rem;
   }
-  
+
   .filter-btn {
     font-size: 0.8rem;
     padding: var(--spacing-xs) var(--spacing-sm);

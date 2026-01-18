@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KI Tracker - Kletterzentrum Innsbruck Occupancy</title>
-  <meta name="description" content="Live occupancy tracker for Kletterzentrum Innsbruck climbing gym. See how busy it is before you go!">
+  <meta name="description"
+    content="Live occupancy tracker for Kletterzentrum Innsbruck climbing gym. See how busy it is before you go!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,6 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
+
 <body>
   <div class="container">
     <!-- Header -->
@@ -30,7 +33,7 @@
           <div class="progress-fill" id="lead-progress"></div>
         </div>
       </div>
-      
+
       <div class="status-card boulder">
         <span class="label">Boulder</span>
         <span class="value" id="boulder-value">--</span>
@@ -49,14 +52,14 @@
 
     <!-- Time Filter -->
     <section class="time-filter">
-      <button class="filter-btn active" data-range="today">Today</button>
-      <button class="filter-btn" data-range="24h">24 Hours</button>
-      <button class="filter-btn" data-range="7d">7 Days</button>
+      <button class="filter-btn active" data-range="1d">1 Day</button>
+      <button class="filter-btn" data-range="2d">2 Days</button>
+      <button class="filter-btn" data-range="7d">Week</button>
     </section>
 
     <!-- Chart -->
-    <section class="chart-container">
-      <canvas id="occupancy-chart"></canvas>
+    <section class="chart-container" id="charts-container">
+      <!-- Charts populated dynamically by JavaScript -->
     </section>
 
     <!-- Best Times -->
@@ -76,4 +79,5 @@
 
   <script src="dashboard.js"></script>
 </body>
+
 </html>

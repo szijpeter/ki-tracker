@@ -6,8 +6,11 @@
 
 // Data and chart state
 let historyData = [];
-let chart = null;
-let currentRange = 'today';
+let charts = []; // Array to hold all active chart instances
+let currentRange = '1d';
+
+// Constants
+const GYM_HOURS = { start: 9, end: 22 };
 
 // DOM Elements
 const leadValue = document.getElementById('lead-value');
@@ -18,6 +21,7 @@ const lastUpdatedEl = document.getElementById('last-updated');
 const refreshBtn = document.getElementById('refresh-btn');
 const timesGrid = document.getElementById('times-grid');
 const filterBtns = document.querySelectorAll('.filter-btn');
+const chartsContainer = document.getElementById('charts-container');
 
 /**
  * Fetches the history data from the JSON file
@@ -99,179 +103,384 @@ function animateValue(element, newValue) {
 }
 
 /**
- * Filters data based on the selected time range
+ * Groups data by day (YYYY-MM-DD)
  */
-function filterDataByRange(data, range) {
-    const now = new Date();
-    let cutoff;
-
-    switch (range) {
-        case 'today':
-            cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            break;
-        case '24h':
-            cutoff = new Date(now - 24 * 60 * 60 * 1000);
-            break;
-        case '7d':
-            cutoff = new Date(now - 7 * 24 * 60 * 60 * 1000);
-            break;
-        default:
-            cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    }
-
-    return data.filter(entry => new Date(entry.timestamp) >= cutoff);
+function groupDataByDay(data) {
+    const groups = {};
+    data.forEach(entry => {
+        const date = new Date(entry.timestamp);
+        const key = date.toISOString().split('T')[0];
+        if (!groups[key]) {
+            groups[key] = [];
+        }
+        groups[key].push(entry);
+    });
+    return groups;
 }
 
 /**
- * Creates or updates the occupancy chart
+ * Normalizes data for a single day to ensure consistent X-axis
+ * Injects 0 values at opening/closing times if missing
  */
-function updateChart(data) {
-    const filteredData = filterDataByRange(data, currentRange);
+function normalizeDayData(rawData, dateStr) {
+    // Create base date for this chart
+    const baseDate = new Date(dateStr);
+    const startOfDay = new Date(baseDate);
+    startOfDay.setHours(GYM_HOURS.start, 0, 0, 0);
+    const endOfDay = new Date(baseDate);
+    endOfDay.setHours(GYM_HOURS.end, 0, 0, 0);
 
-    const labels = filteredData.map(d => new Date(d.timestamp));
-    const leadData = filteredData.map(d => d.lead);
-    const boulderData = filteredData.map(d => d.boulder);
+    let data = [...rawData];
 
-    // Determine axis bounds for 'today' to shrink the closed period
-    let minTime, maxTime;
-    if (currentRange === 'today') {
-        const now = new Date();
-        minTime = new Date(now);
-        minTime.setHours(6, 0, 0, 0); // Start at 06:00
-        maxTime = new Date(now);
-        maxTime.setHours(23, 0, 0, 0); // End at 23:00
+    // Check if we need to inject start point
+    if (data.length === 0 || new Date(data[0].timestamp) > startOfDay) {
+        data.unshift({
+            timestamp: startOfDay.toISOString(),
+            lead: 0,
+            boulder: 0
+        });
+    }
 
-        // VISUALIZATION FIX:
-        // Ensure the graph starts at 0 if the first data point is later than 06:00
-        // by injecting a 0 point at minTime and just before the first real point.
-        if (filteredData.length > 0) {
-            const firstTime = new Date(filteredData[0].timestamp);
-            if (firstTime > minTime) {
-                // Add point at 06:00
-                labels.unshift(minTime);
-                leadData.unshift(0);
-                boulderData.unshift(0);
+    // Check if we need to inject end point (only for past days or if gym is closed)
+    // For today, we don't force an end point if it's currently earlier than closing time
+    const now = new Date();
+    const isToday = baseDate.toDateString() === now.toDateString();
 
-                // Add point just before first data (to create step up)
-                const preFirst = new Date(firstTime - 60000); // 1 min before
-                if (preFirst > minTime) {
-                    labels.splice(1, 0, preFirst);
-                    leadData.splice(1, 0, 0);
-                    boulderData.splice(1, 0, 0);
-                }
-            }
+    // logic: if it's a past day, force end point. 
+    // if it's today and current time is past closing, force end point.
+    if (!isToday || (isToday && now.getHours() >= GYM_HOURS.end)) {
+        if (data.length > 0 && new Date(data[data.length - 1].timestamp) < endOfDay) {
+            data.push({
+                timestamp: endOfDay.toISOString(),
+                lead: 0,
+                boulder: 0
+            });
         }
     }
 
-    const ctx = document.getElementById('occupancy-chart').getContext('2d');
+    return {
+        labels: data.map(d => new Date(d.timestamp)),
+        leadData: data.map(d => d.lead),
+        boulderData: data.map(d => d.boulder),
+        minTime: startOfDay,
+        maxTime: endOfDay
+    };
+}
 
-    if (chart) {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = leadData;
-        chart.data.datasets[1].data = boulderData;
+/**
+ * Synchronizes tooltips across multiple charts
+ */
+function syncTooltips(activeChart, tooltipModel) {
+    const dataIndex = tooltipModel.dataPoints?.[0]?.dataIndex;
+    if (dataIndex == null) return;
 
-        // Update scales
-        chart.options.scales.x.time.unit = currentRange === '7d' ? 'day' : 'hour';
-        chart.options.scales.x.min = minTime;
-        chart.options.scales.x.max = maxTime;
+    charts.forEach(chart => {
+        if (chart !== activeChart && !chart.destroyed) {
+            // Need to check if this chart actually has data at this index
+            const meta = chart.getDatasetMeta(0);
+            if (meta.data[dataIndex]) {
+                chart.setActiveElements([
+                    { datasetIndex: 0, index: dataIndex },
+                    { datasetIndex: 1, index: dataIndex }
+                ]);
+                chart.tooltip.setActiveElements([
+                    { datasetIndex: 0, index: dataIndex },
+                    { datasetIndex: 1, index: dataIndex }
+                ], { x: 0, y: 0 });
+                chart.update('none');
+            }
+        }
+    });
+}
 
-        chart.update('none');
-    } else {
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Lead',
-                        data: leadData,
-                        borderColor: '#818cf8',
-                        backgroundColor: 'rgba(129, 140, 248, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                    },
-                    {
-                        label: 'Boulder',
-                        data: boulderData,
-                        borderColor: '#fbbf24',
-                        backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                    }
-                ]
+/**
+ * Creates a single day chart instance
+ */
+function createDayChart(canvasCtx, dayData, minTime, maxTime) {
+    return new Chart(canvasCtx, {
+        type: 'line',
+        data: {
+            labels: dayData.labels,
+            datasets: [
+                {
+                    label: 'Lead',
+                    data: dayData.leadData,
+                    borderColor: '#818cf8',
+                    backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                },
+                {
+                    label: 'Boulder',
+                    data: dayData.boulderData,
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
+            plugins: {
+                legend: {
+                    display: false // Hide legend to save space on small charts
                 },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            color: '#a1a1b5',
-                            usePointStyle: true,
-                            padding: 20,
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: '#24243a',
-                        titleColor: '#ffffff',
-                        bodyColor: '#a1a1b5',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: function (context) {
-                                return `${context.dataset.label}: ${context.parsed.y}%`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        min: minTime,
-                        max: maxTime,
-                        time: {
-                            unit: currentRange === '7d' ? 'day' : 'hour',
-                            displayFormats: {
-                                hour: 'HH:mm',
-                                day: 'EEE'
-                            }
+                tooltip: {
+                    backgroundColor: '#24243a',
+                    titleColor: '#ffffff',
+                    bodyColor: '#a1a1b5',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    // external: true, // We trigger syncing manually via onHover/interaction
+                    callbacks: {
+                        label: function (context) {
+                            return `${context.dataset.label}: ${context.parsed.y}%`;
                         },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                        },
-                        ticks: {
-                            color: '#6b6b80',
-                            maxTicksLimit: 8,
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: 100,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                        },
-                        ticks: {
-                            color: '#6b6b80',
-                            callback: value => value + '%'
+                        title: function (context) {
+                            // Format time only
+                            const date = new Date(context[0].parsed.x);
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         }
                     }
                 }
+            },
+            onHover: (event, elements, chart) => {
+                // Trigger sync logic here if needed, but 'interaction' mode handles standard tooltips.
+                // For true external sync, we rely on the tooltip plugin's hooks or custom events.
+                // However, Chart.js doesn't have a simple 'onTooltipShow' event.
+                // A common workaround is hooking into the tooltip call.
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    min: minTime,
+                    max: maxTime,
+                    time: {
+                        unit: 'hour',
+                        displayFormats: {
+                            hour: 'HH:mm'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    ticks: {
+                        color: '#6b6b80',
+                        maxTicksLimit: 8,
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    ticks: {
+                        color: '#6b6b80',
+                        callback: value => value + '%'
+                    }
+                }
+            },
+            // Hook for external hook synchronization
+            plugins: {
+                tooltip: {
+                    // We override the internal hook to broadcast changes
+                    external: function (context) {
+                        // Default tooltip rendering is disabled if external is true,
+                        // but we want *both* default rendering AND custom syncing.
+                        // So we don't set external: true, but we could shim interaction logic.
+                        // Instead, we 'll try adding a custom plugin.
+                    }
+                }
             }
-        });
+        },
+        plugins: [{
+            id: 'syncTooltip',
+            afterEvent: (chart, args) => {
+                if (args.event.type === 'mousemove' || args.event.type === 'mouseout') {
+                    // Start synchronization
+                    const activeElements = chart.getActiveElements();
+                    if (activeElements.length > 0) {
+                        // Find the data index
+                        const dataIndex = activeElements[0].index;
+
+                        // Sync to other charts
+                        charts.forEach(c => {
+                            if (c !== chart && !c.destroyed) {
+                                const meta = c.getDatasetMeta(0);
+                                // Only show if data index exists for this chart (handling potentially different lengths if not normalized identically)
+                                if (meta.data[dataIndex]) {
+                                    c.setActiveElements([
+                                        { datasetIndex: 0, index: dataIndex },
+                                        { datasetIndex: 1, index: dataIndex }
+                                    ]);
+                                    c.tooltip.setActiveElements([
+                                        { datasetIndex: 0, index: dataIndex },
+                                        { datasetIndex: 1, index: dataIndex }
+                                    ], { x: 0, y: 0 }); // coords ignored usually
+                                    c.update('none');
+                                }
+                            }
+                        });
+                    } else {
+                        // Clear other charts
+                        charts.forEach(c => {
+                            if (c !== chart && !c.destroyed) {
+                                c.setActiveElements([]);
+                                c.tooltip.setActiveElements([], { x: 0, y: 0 });
+                                c.update('none');
+                            }
+                        });
+                    }
+                }
+            }
+        }]
+    });
+}
+
+/**
+ * Renders the Single Day View
+ */
+function renderSingleDayView(groupedData) {
+    chartsContainer.className = 'charts-container'; // default layout
+
+    // Get today's data
+    const todayKey = new Date().toISOString().split('T')[0];
+    const rawTodayData = groupedData[todayKey] || [];
+
+    const dayWrapper = document.createElement('div');
+    dayWrapper.className = 'day-chart-wrapper';
+
+    const dateLabel = document.createElement('div');
+    dateLabel.className = 'date-label';
+    dateLabel.textContent = 'Today';
+    dayWrapper.appendChild(dateLabel);
+
+    const canvas = document.createElement('canvas');
+    dayWrapper.appendChild(canvas);
+    chartsContainer.appendChild(dayWrapper);
+
+    const normalized = normalizeDayData(rawTodayData, todayKey);
+    const chart = createDayChart(canvas.getContext('2d'), normalized, normalized.minTime, normalized.maxTime);
+    charts.push(chart);
+}
+
+/**
+ * Renders the Two Day View
+ */
+function renderTwoDayView(groupedData) {
+    chartsContainer.className = 'charts-container two-day';
+
+    const sortedKeys = Object.keys(groupedData).sort().reverse();
+    // We want today and yesterday. If today is missing (e.g. early morning), we might still want to show it?
+    // Let's assume we always want Today + Yesterday
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const daysToShow = [today, yesterday];
+
+    daysToShow.forEach((date, i) => {
+        const key = date.toISOString().split('T')[0];
+        const rawData = groupedData[key] || [];
+
+        const dayWrapper = document.createElement('div');
+        dayWrapper.className = 'day-chart-wrapper';
+
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'date-label';
+        dateLabel.textContent = i === 0 ? 'Today' : 'Yesterday';
+        dayWrapper.appendChild(dateLabel);
+
+        const canvas = document.createElement('canvas');
+        dayWrapper.appendChild(canvas);
+        chartsContainer.appendChild(dayWrapper);
+
+        const normalized = normalizeDayData(rawData, key);
+        const chart = createDayChart(canvas.getContext('2d'), normalized, normalized.minTime, normalized.maxTime);
+        charts.push(chart);
+    });
+}
+
+/**
+ * Renders the Weekly View
+ */
+function renderWeeklyView(groupedData) {
+    chartsContainer.className = 'charts-container week';
+
+    const today = new Date();
+    const daysToShow = [];
+
+    // Generate last 7 days including today
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        daysToShow.push(d);
+    }
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    daysToShow.forEach((date, i) => {
+        const key = date.toISOString().split('T')[0];
+        const rawData = groupedData[key] || [];
+
+        const dayWrapper = document.createElement('div');
+        dayWrapper.className = 'day-chart-wrapper';
+
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'date-label';
+        dateLabel.textContent = i === 0 ? 'Today' : daysOfWeek[date.getDay()];
+        dayWrapper.appendChild(dateLabel);
+
+        const canvas = document.createElement('canvas');
+        dayWrapper.appendChild(canvas);
+        chartsContainer.appendChild(dayWrapper);
+
+        const normalized = normalizeDayData(rawData, key);
+        const chart = createDayChart(canvas.getContext('2d'), normalized, normalized.minTime, normalized.maxTime);
+        charts.push(chart);
+    });
+}
+
+/**
+ * Main function to update charts based on selected view
+ */
+function updateChart(data) {
+    // 1. Destroy existing charts
+    charts.forEach(chart => chart.destroy());
+    charts = [];
+    chartsContainer.innerHTML = '';
+
+    // 2. Group data
+    const groupedData = groupDataByDay(data);
+
+    // 3. Render appropriate view
+    switch (currentRange) {
+        case '1d':
+            renderSingleDayView(groupedData);
+            break;
+        case '2d':
+            renderTwoDayView(groupedData);
+            break;
+        case '7d':
+            renderWeeklyView(groupedData);
+            break;
+        default:
+            renderSingleDayView(groupedData);
     }
 }
 
@@ -335,7 +544,7 @@ async function refresh() {
 
     const result = await fetchData();
     updateCurrentStatus(result.history, result.status);
-    updateChart(result.history);
+    updateChart(result.history); // Uses currentRange global
     updateBestTimes(result.history);
 
     setTimeout(() => {
