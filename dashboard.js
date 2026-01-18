@@ -7,7 +7,7 @@
 // Data and chart state
 let historyData = [];
 let charts = []; // Array to hold all active chart instances
-let charts = []; // Array to hold all active chart instances
+
 let currentRange = '1d';
 let visibleDatasets = { lead: true, boulder: true };
 
