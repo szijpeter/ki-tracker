@@ -478,6 +478,35 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
 }
 
 /**
+ * Calculates the peak Lead and Boulder values for a single day's data
+ * @param {Array} dayData - Array of data entries for the day
+ * @returns {Object} Object with maxLead, maxBoulder, maxLeadTime, maxBoulderTime
+ */
+function calculatePeaksForDay(dayData) {
+    const validLeadEntries = dayData.filter(e => e.lead != null && e.lead > 0);
+    const validBoulderEntries = dayData.filter(e => e.boulder != null && e.boulder > 0);
+
+    let maxLead = null;
+    let maxLeadTime = null;
+    let maxBoulder = null;
+    let maxBoulderTime = null;
+
+    if (validLeadEntries.length > 0) {
+        const maxEntry = validLeadEntries.reduce((max, e) => e.lead > max.lead ? e : max);
+        maxLead = maxEntry.lead;
+        maxLeadTime = new Date(maxEntry.timestamp);
+    }
+
+    if (validBoulderEntries.length > 0) {
+        const maxEntry = validBoulderEntries.reduce((max, e) => e.boulder > max.boulder ? e : max);
+        maxBoulder = maxEntry.boulder;
+        maxBoulderTime = new Date(maxEntry.timestamp);
+    }
+
+    return { maxLead, maxBoulder, maxLeadTime, maxBoulderTime };
+}
+
+/**
  * Renders the Single Day View
  */
 function renderSingleDayView(groupedData) {
@@ -500,7 +529,17 @@ function renderSingleDayView(groupedData) {
     chartsContainer.appendChild(dayWrapper);
 
     const normalized = normalizeDayData(rawTodayData, todayKey);
-    const chart = createDayChart(canvas.getContext('2d'), normalized, normalized.minTime, normalized.maxTime);
+    const peaks = calculatePeaksForDay(rawTodayData);
+    const chart = createDayChartWithPeakHighlight(
+        canvas.getContext('2d'),
+        normalized,
+        normalized.minTime,
+        normalized.maxTime,
+        peaks.maxLead,
+        peaks.maxBoulder,
+        peaks.maxLeadTime,
+        peaks.maxBoulderTime
+    );
     charts.push(chart);
 }
 
@@ -535,7 +574,17 @@ function renderTwoDayView(groupedData) {
         chartsContainer.appendChild(dayWrapper);
 
         const normalized = normalizeDayData(rawData, key);
-        const chart = createDayChart(canvas.getContext('2d'), normalized, normalized.minTime, normalized.maxTime);
+        const peaks = calculatePeaksForDay(rawData);
+        const chart = createDayChartWithPeakHighlight(
+            canvas.getContext('2d'),
+            normalized,
+            normalized.minTime,
+            normalized.maxTime,
+            peaks.maxLead,
+            peaks.maxBoulder,
+            peaks.maxLeadTime,
+            peaks.maxBoulderTime
+        );
         charts.push(chart);
     });
 }
@@ -575,7 +624,17 @@ function renderWeeklyView(groupedData) {
         chartsContainer.appendChild(dayWrapper);
 
         const normalized = normalizeDayData(rawData, key);
-        const chart = createDayChart(canvas.getContext('2d'), normalized, normalized.minTime, normalized.maxTime);
+        const peaks = calculatePeaksForDay(rawData);
+        const chart = createDayChartWithPeakHighlight(
+            canvas.getContext('2d'),
+            normalized,
+            normalized.minTime,
+            normalized.maxTime,
+            peaks.maxLead,
+            peaks.maxBoulder,
+            peaks.maxLeadTime,
+            peaks.maxBoulderTime
+        );
         charts.push(chart);
     });
 }
@@ -584,7 +643,7 @@ function renderWeeklyView(groupedData) {
  * Calculates the max Lead and Boulder values for each day
  * @param {Array} data - Raw history data
  * @param {number} daysToInclude - Number of days to include
- * @returns {Array} Array of { date, dateStr, maxLead, maxBoulder }
+ * @returns {Array} Array of { date, dateStr, maxLead, maxBoulder, maxLeadTime, maxBoulderTime, dayEntries }
  */
 function calculateDailyMax(data, daysToInclude) {
     const today = new Date();
@@ -605,18 +664,31 @@ function calculateDailyMax(data, daysToInclude) {
         const validLeadEntries = dayEntries.filter(e => e.lead != null && e.lead > 0);
         const validBoulderEntries = dayEntries.filter(e => e.boulder != null && e.boulder > 0);
 
-        const maxLead = validLeadEntries.length > 0
-            ? Math.max(...validLeadEntries.map(e => e.lead))
-            : null;
-        const maxBoulder = validBoulderEntries.length > 0
-            ? Math.max(...validBoulderEntries.map(e => e.boulder))
-            : null;
+        let maxLead = null;
+        let maxLeadTime = null;
+        let maxBoulder = null;
+        let maxBoulderTime = null;
+
+        if (validLeadEntries.length > 0) {
+            const maxEntry = validLeadEntries.reduce((max, e) => e.lead > max.lead ? e : max);
+            maxLead = maxEntry.lead;
+            maxLeadTime = new Date(maxEntry.timestamp);
+        }
+
+        if (validBoulderEntries.length > 0) {
+            const maxEntry = validBoulderEntries.reduce((max, e) => e.boulder > max.boulder ? e : max);
+            maxBoulder = maxEntry.boulder;
+            maxBoulderTime = new Date(maxEntry.timestamp);
+        }
 
         results.push({
             date,
             dateStr,
             maxLead,
-            maxBoulder
+            maxBoulder,
+            maxLeadTime,
+            maxBoulderTime,
+            dayEntries
         });
     }
 
@@ -625,9 +697,13 @@ function calculateDailyMax(data, daysToInclude) {
 }
 
 /**
- * Creates a bar chart for max occupancy data
+ * Creates a bar chart for max occupancy data with click-to-drill-down
+ * @param {CanvasRenderingContext2D} canvasCtx - Canvas context
+ * @param {Array} dailyMaxData - Array of daily max data
+ * @param {string} title - Chart title
+ * @param {Function} onDayClick - Callback when a day is clicked
  */
-function createMaxChart(canvasCtx, dailyMaxData, title) {
+function createMaxChart(canvasCtx, dailyMaxData, title, onDayClick) {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const labels = dailyMaxData.map(d => {
@@ -638,7 +714,7 @@ function createMaxChart(canvasCtx, dailyMaxData, title) {
         return `${dayName} ${dayNum}/${month}`;
     });
 
-    return new Chart(canvasCtx, {
+    const chart = new Chart(canvasCtx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -666,6 +742,13 @@ function createMaxChart(canvasCtx, dailyMaxData, title) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            onClick: (event, elements) => {
+                if (elements.length > 0 && onDayClick) {
+                    const index = elements[0].index;
+                    const dayData = dailyMaxData[index];
+                    onDayClick(dayData);
+                }
+            },
             plugins: {
                 legend: {
                     display: false
@@ -673,7 +756,21 @@ function createMaxChart(canvasCtx, dailyMaxData, title) {
                 tooltip: {
                     enabled: true,
                     callbacks: {
-                        label: context => `${context.dataset.label}: ${context.parsed.y}%`
+                        label: context => {
+                            const index = context.dataIndex;
+                            const dayData = dailyMaxData[index];
+                            const value = context.parsed.y;
+
+                            if (context.dataset.label === 'Lead Max' && dayData.maxLeadTime) {
+                                const time = dayData.maxLeadTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                return `Lead Max: ${value}% (at ${time})`;
+                            } else if (context.dataset.label === 'Boulder Max' && dayData.maxBoulderTime) {
+                                const time = dayData.maxBoulderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                return `Boulder Max: ${value}% (at ${time})`;
+                            }
+                            return `${context.dataset.label}: ${value}%`;
+                        },
+                        footer: () => 'Click to see daily details'
                     }
                 }
             },
@@ -702,6 +799,261 @@ function createMaxChart(canvasCtx, dailyMaxData, title) {
             }
         }
     });
+
+    // Change cursor to pointer on hover over bars
+    canvasCtx.canvas.style.cursor = 'pointer';
+
+    return chart;
+}
+
+/**
+ * Creates a day chart with peak value highlights (vertical red line at peak time)
+ */
+function createDayChartWithPeakHighlight(canvasCtx, dayData, minTime, maxTime, maxLead, maxBoulder, maxLeadTime, maxBoulderTime) {
+    // Plugin to draw vertical peak lines
+    const peakLinesPlugin = {
+        id: 'peakLines',
+        afterDatasetsDraw: (chart) => {
+            const { ctx, chartArea, scales } = chart;
+
+            ctx.save();
+
+            // Calculate positions first to detect overlap
+            const leadVisible = maxLead && maxLeadTime && chart.isDatasetVisible(0);
+            const boulderVisible = maxBoulder && maxBoulderTime && chart.isDatasetVisible(1);
+
+            const xLead = leadVisible ? scales.x.getPixelForValue(maxLeadTime.getTime()) : null;
+            const xBoulder = boulderVisible ? scales.x.getPixelForValue(maxBoulderTime.getTime()) : null;
+
+            // Measure text widths for accurate overlap detection
+            ctx.font = '600 11px Inter';
+            const leadValueText = `${maxLead}%`;
+            const boulderValueText = `${maxBoulder}%`;
+            const leadValueWidth = leadVisible ? ctx.measureText(leadValueText).width : 0;
+            const boulderValueWidth = boulderVisible ? ctx.measureText(boulderValueText).width : 0;
+
+            ctx.font = '500 10px Inter';
+            const leadTimeText = leadVisible ? maxLeadTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const boulderTimeText = boulderVisible ? maxBoulderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const leadTimeWidth = leadVisible ? ctx.measureText(leadTimeText).width : 0;
+            const boulderTimeWidth = boulderVisible ? ctx.measureText(boulderTimeText).width : 0;
+
+            // Calculate if labels would actually overlap based on text width
+            // Labels overlap if the distance between centers is less than half of each label's width combined
+            const valueLabelsOverlap = xLead && xBoulder &&
+                Math.abs(xBoulder - xLead) < (leadValueWidth / 2 + boulderValueWidth / 2 + 4);
+            const timeLabelsOverlap = xLead && xBoulder &&
+                Math.abs(xBoulder - xLead) < (leadTimeWidth / 2 + boulderTimeWidth / 2 + 4);
+
+            // Helper function to clamp text position within chart bounds
+            const clampTextX = (x, textWidth, align) => {
+                const halfWidth = textWidth / 2;
+                const minX = chartArea.left + halfWidth;
+                const maxX = chartArea.right - halfWidth;
+                return Math.max(minX, Math.min(maxX, x));
+            };
+
+            // Draw Lead peak line (vertical at time of peak)
+            if (leadVisible && xLead >= chartArea.left && xLead <= chartArea.right) {
+                ctx.setLineDash([6, 4]);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(129, 140, 248, 0.8)'; // Lead purple
+                ctx.beginPath();
+                ctx.moveTo(xLead, chartArea.top);
+                ctx.lineTo(xLead, chartArea.bottom);
+                ctx.stroke();
+
+                // Value label at top - Lead always stays at normal position
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(129, 140, 248, 1)';
+                ctx.font = '600 11px Inter';
+                ctx.textAlign = 'center';
+                const clampedValueX = clampTextX(xLead, leadValueWidth, 'center');
+                ctx.fillText(leadValueText, clampedValueX, chartArea.top - 8);
+
+                // Time label at bottom - Lead always stays at normal position
+                ctx.fillStyle = 'rgba(129, 140, 248, 0.9)';
+                ctx.font = '500 10px Inter';
+                const clampedTimeX = clampTextX(xLead, leadTimeWidth, 'center');
+                ctx.fillText(leadTimeText, clampedTimeX, chartArea.bottom + 14);
+            }
+
+            // Draw Boulder peak line (vertical at time of peak)
+            if (boulderVisible && xBoulder >= chartArea.left && xBoulder <= chartArea.right) {
+                ctx.setLineDash([6, 4]);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)'; // Boulder yellow
+                ctx.beginPath();
+                ctx.moveTo(xBoulder, chartArea.top);
+                ctx.lineTo(xBoulder, chartArea.bottom);
+                ctx.stroke();
+
+                // Value label at top - Boulder gets pushed down if overlapping with Lead
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(251, 191, 36, 1)';
+                ctx.font = '600 11px Inter';
+                ctx.textAlign = 'center';
+                // Push Boulder down when overlapping (>= handles the case when peaks are at same time)
+                const topOffset = valueLabelsOverlap ? 14 : 0;
+                const clampedValueX = clampTextX(xBoulder, boulderValueWidth, 'center');
+                ctx.fillText(boulderValueText, clampedValueX, chartArea.top - 8 + topOffset);
+
+                // Time label at bottom - Boulder gets pushed up (closer to chart) if overlapping
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+                ctx.font = '500 10px Inter';
+                const bottomOffset = timeLabelsOverlap ? -12 : 0;
+                const clampedTimeX = clampTextX(xBoulder, boulderTimeWidth, 'center');
+                ctx.fillText(boulderTimeText, clampedTimeX, chartArea.bottom + 14 + bottomOffset);
+            }
+
+            ctx.restore();
+        }
+    };
+
+    return new Chart(canvasCtx, {
+        type: 'line',
+        data: {
+            labels: dayData.labels,
+            datasets: [
+                {
+                    label: 'Lead',
+                    data: dayData.leadData,
+                    borderColor: '#818cf8',
+                    backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    hidden: !visibleDatasets.lead
+                },
+                {
+                    label: 'Boulder',
+                    data: dayData.boulderData,
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    hidden: !visibleDatasets.boulder
+                }
+            ]
+        },
+        options: {
+            layout: {
+                padding: {
+                    top: 25
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    min: minTime,
+                    max: maxTime,
+                    time: {
+                        unit: 'hour',
+                        displayFormats: {
+                            hour: 'HH:mm'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    ticks: {
+                        color: '#6b6b80',
+                        maxTicksLimit: 8,
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    ticks: {
+                        color: '#6b6b80',
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        },
+        plugins: [interpolationPlugin, peakLinesPlugin]
+    });
+}
+
+/**
+ * Renders a drill-down day view below the max chart
+ */
+function renderDrillDownDayView(dayData, container) {
+    // Remove existing drill-down if any
+    const existingDrillDown = container.querySelector('.drill-down-wrapper');
+    if (existingDrillDown) {
+        existingDrillDown.remove();
+        // Also remove the chart from the charts array
+        const index = charts.findIndex(c => c.canvas && c.canvas.parentElement?.classList.contains('drill-down-chart'));
+        if (index !== -1) {
+            charts[index].destroy();
+            charts.splice(index, 1);
+        }
+    }
+
+    // Create drill-down wrapper
+    const drillDownWrapper = document.createElement('div');
+    drillDownWrapper.className = 'drill-down-wrapper';
+    drillDownWrapper.style.marginTop = '1rem';
+    drillDownWrapper.style.paddingTop = '1rem';
+    drillDownWrapper.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+
+    const chartWrapper = document.createElement('div');
+    chartWrapper.className = 'day-chart-wrapper drill-down-chart';
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const date = new Date(dayData.dateStr);
+    const dayName = daysOfWeek[date.getDay()];
+    const dateFormatted = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+    const titleLabel = document.createElement('div');
+    titleLabel.className = 'date-label';
+    titleLabel.textContent = `${dayName}, ${dateFormatted}`;
+    chartWrapper.appendChild(titleLabel);
+
+    const canvas = document.createElement('canvas');
+    chartWrapper.appendChild(canvas);
+    drillDownWrapper.appendChild(chartWrapper);
+    container.appendChild(drillDownWrapper);
+
+    // Normalize day data
+    const normalized = normalizeDayData(dayData.dayEntries, dayData.dateStr);
+
+    // Create chart with peak highlight
+    const chart = createDayChartWithPeakHighlight(
+        canvas.getContext('2d'),
+        normalized,
+        normalized.minTime,
+        normalized.maxTime,
+        dayData.maxLead,
+        dayData.maxBoulder,
+        dayData.maxLeadTime,
+        dayData.maxBoulderTime
+    );
+    charts.push(chart);
 }
 
 /**
@@ -717,14 +1069,20 @@ function renderMaxWeekView(data) {
 
     const titleLabel = document.createElement('div');
     titleLabel.className = 'date-label';
-    titleLabel.textContent = 'Daily Peak Occupancy (Last 7 Days)';
+    titleLabel.textContent = 'Daily Peak Occupancy (Last 7 Days) — Click a bar for details';
     chartWrapper.appendChild(titleLabel);
 
     const canvas = document.createElement('canvas');
     chartWrapper.appendChild(canvas);
     chartsContainer.appendChild(chartWrapper);
 
-    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 7 Days');
+    const onDayClick = (dayData) => {
+        if (dayData.dayEntries && dayData.dayEntries.length > 0) {
+            renderDrillDownDayView(dayData, chartsContainer);
+        }
+    };
+
+    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 7 Days', onDayClick);
     charts.push(chart);
 }
 
@@ -741,14 +1099,20 @@ function renderMaxMonthView(data) {
 
     const titleLabel = document.createElement('div');
     titleLabel.className = 'date-label';
-    titleLabel.textContent = 'Daily Peak Occupancy (Last 30 Days)';
+    titleLabel.textContent = 'Daily Peak Occupancy (Last 30 Days) — Click a bar for details';
     chartWrapper.appendChild(titleLabel);
 
     const canvas = document.createElement('canvas');
     chartWrapper.appendChild(canvas);
     chartsContainer.appendChild(chartWrapper);
 
-    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 30 Days');
+    const onDayClick = (dayData) => {
+        if (dayData.dayEntries && dayData.dayEntries.length > 0) {
+            renderDrillDownDayView(dayData, chartsContainer);
+        }
+    };
+
+    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 30 Days', onDayClick);
     charts.push(chart);
 }
 
