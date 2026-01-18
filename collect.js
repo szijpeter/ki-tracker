@@ -8,7 +8,7 @@ import { readFile, writeFile, rename } from 'fs/promises';
 import { existsSync } from 'fs';
 
 const DATA_FILE = './data/history.json';
-const MAX_DAYS = 7; // Keep 7 days of data
+const MAX_DAYS = 365; // Keep 1 year of data for long-term trends
 
 /**
  * Reads existing history data or returns empty array

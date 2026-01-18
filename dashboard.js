@@ -581,6 +581,178 @@ function renderWeeklyView(groupedData) {
 }
 
 /**
+ * Calculates the max Lead and Boulder values for each day
+ * @param {Array} data - Raw history data
+ * @param {number} daysToInclude - Number of days to include
+ * @returns {Array} Array of { date, dateStr, maxLead, maxBoulder }
+ */
+function calculateDailyMax(data, daysToInclude) {
+    const today = new Date();
+    const results = [];
+
+    for (let i = 0; i < daysToInclude; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        // Filter entries for this day
+        const dayEntries = data.filter(entry => {
+            const entryDate = new Date(entry.timestamp).toISOString().split('T')[0];
+            return entryDate === dateStr;
+        });
+
+        // Calculate max values (ignore null/0 values from closed hours)
+        const validLeadEntries = dayEntries.filter(e => e.lead != null && e.lead > 0);
+        const validBoulderEntries = dayEntries.filter(e => e.boulder != null && e.boulder > 0);
+
+        const maxLead = validLeadEntries.length > 0
+            ? Math.max(...validLeadEntries.map(e => e.lead))
+            : null;
+        const maxBoulder = validBoulderEntries.length > 0
+            ? Math.max(...validBoulderEntries.map(e => e.boulder))
+            : null;
+
+        results.push({
+            date,
+            dateStr,
+            maxLead,
+            maxBoulder
+        });
+    }
+
+    // Reverse to show oldest to newest (left to right)
+    return results.reverse();
+}
+
+/**
+ * Creates a bar chart for max occupancy data
+ */
+function createMaxChart(canvasCtx, dailyMaxData, title) {
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const labels = dailyMaxData.map(d => {
+        const date = new Date(d.dateStr);
+        const dayName = daysOfWeek[date.getDay()];
+        const dayNum = date.getDate();
+        const month = date.getMonth() + 1;
+        return `${dayName} ${dayNum}/${month}`;
+    });
+
+    return new Chart(canvasCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Lead Max',
+                    data: dailyMaxData.map(d => d.maxLead),
+                    backgroundColor: 'rgba(129, 140, 248, 0.7)',
+                    borderColor: '#818cf8',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    hidden: !visibleDatasets.lead
+                },
+                {
+                    label: 'Boulder Max',
+                    data: dailyMaxData.map(d => d.maxBoulder),
+                    backgroundColor: 'rgba(251, 191, 36, 0.7)',
+                    borderColor: '#fbbf24',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    hidden: !visibleDatasets.boulder
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: context => `${context.dataset.label}: ${context.parsed.y}%`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    ticks: {
+                        color: '#6b6b80',
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    ticks: {
+                        color: '#6b6b80',
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Renders the Max/Week View - Bar chart showing max occupancy for the last 7 days
+ */
+function renderMaxWeekView(data) {
+    chartsContainer.className = 'charts-container';
+
+    const dailyMaxData = calculateDailyMax(data, 7);
+
+    const chartWrapper = document.createElement('div');
+    chartWrapper.className = 'day-chart-wrapper';
+
+    const titleLabel = document.createElement('div');
+    titleLabel.className = 'date-label';
+    titleLabel.textContent = 'Daily Peak Occupancy (Last 7 Days)';
+    chartWrapper.appendChild(titleLabel);
+
+    const canvas = document.createElement('canvas');
+    chartWrapper.appendChild(canvas);
+    chartsContainer.appendChild(chartWrapper);
+
+    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 7 Days');
+    charts.push(chart);
+}
+
+/**
+ * Renders the Max/Month View - Bar chart showing max occupancy for the last 30 days
+ */
+function renderMaxMonthView(data) {
+    chartsContainer.className = 'charts-container';
+
+    const dailyMaxData = calculateDailyMax(data, 30);
+
+    const chartWrapper = document.createElement('div');
+    chartWrapper.className = 'day-chart-wrapper';
+
+    const titleLabel = document.createElement('div');
+    titleLabel.className = 'date-label';
+    titleLabel.textContent = 'Daily Peak Occupancy (Last 30 Days)';
+    chartWrapper.appendChild(titleLabel);
+
+    const canvas = document.createElement('canvas');
+    chartWrapper.appendChild(canvas);
+    chartsContainer.appendChild(chartWrapper);
+
+    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 30 Days');
+    charts.push(chart);
+}
+
+/**
  * Main function to update charts based on selected view
  */
 function updateChart(data) {
@@ -603,6 +775,12 @@ function updateChart(data) {
                 break;
             case '7d':
                 renderWeeklyView(groupedData);
+                break;
+            case 'maxWeek':
+                renderMaxWeekView(data);
+                break;
+            case 'maxMonth':
+                renderMaxMonthView(data);
                 break;
             default:
                 renderSingleDayView(groupedData);
