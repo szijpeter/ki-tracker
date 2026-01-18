@@ -7,7 +7,9 @@
 // Data and chart state
 let historyData = [];
 let charts = []; // Array to hold all active chart instances
+let charts = []; // Array to hold all active chart instances
 let currentRange = '1d';
+let visibleDatasets = { lead: true, boulder: true };
 
 // Constants
 const GYM_HOURS = { start: 9, end: 22 };
@@ -22,6 +24,8 @@ const refreshBtn = document.getElementById('refresh-btn');
 const timesGrid = document.getElementById('times-grid');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const chartsContainer = document.getElementById('charts-container');
+const leadCard = document.querySelector('.status-card.lead');
+const boulderCard = document.querySelector('.status-card.boulder');
 
 /**
  * Fetches the history data from the JSON file
@@ -289,14 +293,18 @@ const interpolationPlugin = {
                 ctx.font = `700 ${fontSize}px Inter`;
 
                 // Lead Value (Left)
-                ctx.textAlign = 'left';
-                ctx.fillStyle = 'rgba(129, 140, 248, 0.4)';
-                ctx.fillText(`${Math.round(values.lead)}%`, chartArea.left + padding, midY);
+                if (chart.isDatasetVisible(0)) {
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'rgba(129, 140, 248, 0.4)';
+                    ctx.fillText(`${Math.round(values.lead)}%`, chartArea.left + padding, midY);
+                }
 
                 // Boulder Value (Right)
-                ctx.textAlign = 'right';
-                ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
-                ctx.fillText(`${Math.round(values.boulder)}%`, chartArea.right - padding, midY);
+                if (chart.isDatasetVisible(1)) {
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
+                    ctx.fillText(`${Math.round(values.boulder)}%`, chartArea.right - padding, midY);
+                }
 
                 ctx.restore();
             }
@@ -392,7 +400,10 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
                     fill: true, // Fill area under line
                     tension: 0.4,
                     pointRadius: 0,
+                    tension: 0.4,
+                    pointRadius: 0,
                     pointHoverRadius: 0, // No points on hover
+                    hidden: !visibleDatasets.lead
                 },
                 {
                     label: 'Boulder',
@@ -404,6 +415,7 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
                     tension: 0.4,
                     pointRadius: 0,
                     pointHoverRadius: 0,
+                    hidden: !visibleDatasets.boulder
                 }
             ]
         },
@@ -691,6 +703,35 @@ function handleFilterClick(event) {
 // Event Listeners
 refreshBtn.addEventListener('click', refresh);
 filterBtns.forEach(btn => btn.addEventListener('click', handleFilterClick));
+
+if (leadCard) {
+    leadCard.addEventListener('click', () => toggleDataset('lead'));
+}
+if (boulderCard) {
+    boulderCard.addEventListener('click', () => toggleDataset('boulder'));
+}
+
+/**
+ * Toggles the visibility of a dataset
+ */
+function toggleDataset(type) {
+    visibleDatasets[type] = !visibleDatasets[type];
+
+    // Update visual state of button
+    const card = type === 'lead' ? leadCard : boulderCard;
+    if (visibleDatasets[type]) {
+        card.classList.remove('inactive');
+    } else {
+        card.classList.add('inactive');
+    }
+
+    // Update all charts
+    charts.forEach(chart => {
+        const index = type === 'lead' ? 0 : 1;
+        chart.setDatasetVisibility(index, visibleDatasets[type]);
+        chart.update('none'); // Optimize update
+    });
+}
 
 // Initial load
 try {
