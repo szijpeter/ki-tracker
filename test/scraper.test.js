@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { parseOccupancyData } from '../scraper.js';
 
-test('parseOccupancyData extracts correct values from standard layout', (t) => {
+test('parseOccupancyData extracts correct values from standard layout', () => {
     const html = `
     <div class="bar-container">
       <div class="bar" data-percentage="45"></div>
@@ -24,7 +24,7 @@ test('parseOccupancyData extracts correct values from standard layout', (t) => {
     assert.strictEqual(result.openSectors, '25/30');
 });
 
-test('parseOccupancyData handles missing sectors', (t) => {
+test('parseOccupancyData handles missing sectors', () => {
     const html = `
     <div class="bar-container">
       <div class="bar" data-percentage="10"></div>
@@ -39,7 +39,7 @@ test('parseOccupancyData handles missing sectors', (t) => {
     assert.strictEqual(result.overall, 10);
 });
 
-test('parseOccupancyData handles german labels', (t) => {
+test('parseOccupancyData handles german labels', () => {
     const html = `
       <div class="bar-container">
         <div class="bar" data-percentage="80"></div>

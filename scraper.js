@@ -14,7 +14,6 @@ const AJAX_URL = `${BASE_URL}/wp-admin/admin-ajax.php`;
  * @returns {Promise<string>} The nonce token
  */
 async function extractNonce() {
-  /* eslint-disable no-undef */
   // Add AbortController support for Node 16+ (global in 18+)
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
