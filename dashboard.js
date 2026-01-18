@@ -460,27 +460,31 @@ function renderWeeklyView(groupedData) {
  * Main function to update charts based on selected view
  */
 function updateChart(data) {
-    // 1. Destroy existing charts
-    charts.forEach(chart => chart.destroy());
-    charts = [];
-    chartsContainer.innerHTML = '';
+    try {
+        // 1. Destroy existing charts
+        charts.forEach(chart => chart.destroy());
+        charts = [];
+        chartsContainer.innerHTML = '';
 
-    // 2. Group data
-    const groupedData = groupDataByDay(data);
+        // 2. Group data
+        const groupedData = groupDataByDay(data);
 
-    // 3. Render appropriate view
-    switch (currentRange) {
-        case '1d':
-            renderSingleDayView(groupedData);
-            break;
-        case '2d':
-            renderTwoDayView(groupedData);
-            break;
-        case '7d':
-            renderWeeklyView(groupedData);
-            break;
-        default:
-            renderSingleDayView(groupedData);
+        // 3. Render appropriate view
+        switch (currentRange) {
+            case '1d':
+                renderSingleDayView(groupedData);
+                break;
+            case '2d':
+                renderTwoDayView(groupedData);
+                break;
+            case '7d':
+                renderWeeklyView(groupedData);
+                break;
+            default:
+                renderSingleDayView(groupedData);
+        }
+    } catch (error) {
+        showError('Render Error: ' + error.message);
     }
 }
 
@@ -574,7 +578,35 @@ refreshBtn.addEventListener('click', refresh);
 filterBtns.forEach(btn => btn.addEventListener('click', handleFilterClick));
 
 // Initial load
-refresh();
+try {
+    if (typeof Chart === 'undefined') {
+        throw new Error('Chart.js library not loaded');
+    }
+    refresh();
+} catch (error) {
+    showError('Startup Error: ' + error.message);
+}
 
 // Auto-refresh every 5 minutes
-setInterval(refresh, 5 * 60 * 1000);
+setInterval(() => {
+    try {
+        refresh();
+    } catch (error) {
+        console.error('Auto-refresh failed:', error);
+    }
+}, 5 * 60 * 1000);
+
+/**
+ * Displays an error message in the chart container
+ */
+function showError(message) {
+    if (chartsContainer) {
+        chartsContainer.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #ef4444;">
+                <p>⚠️ Unable to load visualization</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.8;">${message}</p>
+            </div>
+        `;
+    }
+    console.error(message);
+}
