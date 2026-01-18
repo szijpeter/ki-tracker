@@ -362,11 +362,12 @@ body {
 }
 
 .day-chart-wrapper .date-label {
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-xs);
-  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+  font-size: 1rem;
   padding-left: var(--spacing-xs);
+  letter-spacing: 0.01em;
 }
 
 /* Chart Canvas Sizing */

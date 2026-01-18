@@ -507,13 +507,31 @@ function calculatePeaksForDay(dayData) {
 }
 
 /**
+ * Formats a date into a prominent day label (e.g., "Sunday, Jan 18")
+ */
+function formatDayLabel(date, showTodayPrefix = false) {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = daysOfWeek[date.getDay()];
+    const dateFormatted = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+
+    if (showTodayPrefix && isToday) {
+        return `Today — ${dayName}, ${dateFormatted}`;
+    }
+    return `${dayName}, ${dateFormatted}`;
+}
+
+/**
  * Renders the Single Day View
  */
 function renderSingleDayView(groupedData) {
     chartsContainer.className = 'charts-container'; // default layout
 
     // Get today's data
-    const todayKey = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayKey = today.toISOString().split('T')[0];
     const rawTodayData = groupedData[todayKey] || [];
 
     const dayWrapper = document.createElement('div');
@@ -521,7 +539,7 @@ function renderSingleDayView(groupedData) {
 
     const dateLabel = document.createElement('div');
     dateLabel.className = 'date-label';
-    dateLabel.textContent = 'Today';
+    dateLabel.textContent = formatDayLabel(today, true);
     dayWrapper.appendChild(dateLabel);
 
     const canvas = document.createElement('canvas');
@@ -566,7 +584,7 @@ function renderTwoDayView(groupedData) {
 
         const dateLabel = document.createElement('div');
         dateLabel.className = 'date-label';
-        dateLabel.textContent = i === 0 ? 'Today' : 'Yesterday';
+        dateLabel.textContent = formatDayLabel(date, i === 0);
         dayWrapper.appendChild(dateLabel);
 
         const canvas = document.createElement('canvas');
@@ -605,8 +623,6 @@ function renderWeeklyView(groupedData) {
         daysToShow.push(d);
     }
 
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
     daysToShow.forEach((date, i) => {
         const key = date.toISOString().split('T')[0];
         const rawData = groupedData[key] || [];
@@ -616,7 +632,7 @@ function renderWeeklyView(groupedData) {
 
         const dateLabel = document.createElement('div');
         dateLabel.className = 'date-label';
-        dateLabel.textContent = i === 0 ? 'Today' : daysOfWeek[date.getDay()];
+        dateLabel.textContent = formatDayLabel(date, i === 0);
         dayWrapper.appendChild(dateLabel);
 
         const canvas = document.createElement('canvas');
@@ -705,13 +721,20 @@ function calculateDailyMax(data, daysToInclude) {
  */
 function createMaxChart(canvasCtx, dailyMaxData, title, onDayClick) {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date().toISOString().split('T')[0];
 
+    // Create multi-line labels: Day name on line 1, date on line 2, TODAY on line 3 (for today only)
     const labels = dailyMaxData.map(d => {
         const date = new Date(d.dateStr);
         const dayName = daysOfWeek[date.getDay()];
         const dayNum = date.getDate();
-        const month = date.getMonth() + 1;
-        return `${dayName} ${dayNum}/${month}`;
+        const month = date.toLocaleDateString([], { month: 'short' });
+        // For today: show day name, date, then TODAY on separate lines
+        if (d.dateStr === today) {
+            return [dayName, `${dayNum} ${month}`, 'TODAY'];
+        }
+        // For other days: day name on line 1, date on line 2
+        return [dayName, `${dayNum} ${month}`];
     });
 
     const chart = new Chart(canvasCtx, {
@@ -780,9 +803,14 @@ function createMaxChart(canvasCtx, dailyMaxData, title, onDayClick) {
                         color: 'rgba(255, 255, 255, 0.05)'
                     },
                     ticks: {
-                        color: '#6b6b80',
-                        maxRotation: 45,
-                        minRotation: 45
+                        autoSkip: false,
+                        color: '#e0e0f0',
+                        font: {
+                            weight: 600,
+                            size: 10
+                        },
+                        maxRotation: 0,
+                        minRotation: 0
                     }
                 },
                 y: {
