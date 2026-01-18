@@ -265,74 +265,74 @@ const interpolationPlugin = {
         if (active && time) {
             const x = scales.x.getPixelForValue(time);
 
-            // 1. Draw Vertical Line
+            // Get interpolated values
+            const values = getInterpolatedValues(chart, time);
+            if (!values) return;
+
+            const leadVisible = chart.isDatasetVisible(0);
+            const boulderVisible = chart.isDatasetVisible(1);
+
+            // Prepare text and measure widths for positioning
+            const leadValueText = `${Math.round(values.lead)}%`;
+            const boulderValueText = `${Math.round(values.boulder)}%`;
+            const timeStr = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             ctx.save();
+            ctx.font = '600 11px Inter';
+            const leadValueWidth = ctx.measureText(leadValueText).width;
+            const boulderValueWidth = ctx.measureText(boulderValueText).width;
+
+            ctx.font = '500 10px Inter';
+            const timeWidth = ctx.measureText(timeStr).width;
+
+            // Check if Lead and Boulder value labels would overlap (both at same x position)
+            const valueLabelsOverlap = leadVisible && boulderVisible;
+
+            // Helper function to clamp text position within chart bounds
+            const clampTextX = (xPos, textWidth) => {
+                const halfWidth = textWidth / 2;
+                const minX = chartArea.left + halfWidth;
+                const maxX = chartArea.right - halfWidth;
+                return Math.max(minX, Math.min(maxX, xPos));
+            };
+
+            // 1. Draw Vertical Line (white dashed, like a crosshair)
             ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]);
             ctx.moveTo(x, chartArea.top);
             ctx.lineTo(x, chartArea.bottom);
             ctx.stroke();
-            ctx.restore();
 
-            // 2. Draw Background Numbers (Interpolated)
-            const values = getInterpolatedValues(chart, time);
-
-            if (values) {
-                ctx.save();
-                ctx.textBaseline = 'middle';
-                const midY = (chartArea.top + chartArea.bottom) / 2;
-
-                // Align to edges with padding to prevent cutoff and maximize separation
-                const padding = chartArea.width * 0.05; // 5% padding
-
-                // Responsive font size
-                // Reduced width factor to 0.2 to ensure they fit side-by-side
-                const fontSize = Math.min(chartArea.height * 0.4, chartArea.width * 0.2, 60);
-                ctx.font = `700 ${fontSize}px Inter`;
-
-                // Lead Value (Left)
-                if (chart.isDatasetVisible(0)) {
-                    ctx.textAlign = 'left';
-                    ctx.fillStyle = 'rgba(129, 140, 248, 0.4)';
-                    ctx.fillText(`${Math.round(values.lead)}%`, chartArea.left + padding, midY);
-                }
-
-                // Boulder Value (Right)
-                if (chart.isDatasetVisible(1)) {
-                    ctx.textAlign = 'right';
-                    ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
-                    ctx.fillText(`${Math.round(values.boulder)}%`, chartArea.right - padding, midY);
-                }
-
-                ctx.restore();
+            // 2. Draw Lead value label at top
+            if (leadVisible) {
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(129, 140, 248, 1)';
+                ctx.font = '600 11px Inter';
+                ctx.textAlign = 'center';
+                const clampedX = clampTextX(x, leadValueWidth);
+                ctx.fillText(leadValueText, clampedX, chartArea.top - 8);
             }
 
-            // 3. Draw Time Label (Tooltip) - Drawn LAST to be on top
-            ctx.save();
-            const timeStr = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            ctx.font = '500 12px Inter';
-            const textWidth = ctx.measureText(timeStr).width;
-            const msgPadding = 6;
-            const msgWidth = textWidth + msgPadding * 2;
-            const msgHeight = 20;
-            const tooltipY = chartArea.top - 22; // Position above chart area
+            // 3. Draw Boulder value label at top (pushed down if overlapping)
+            if (boulderVisible) {
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(251, 191, 36, 1)';
+                ctx.font = '600 11px Inter';
+                ctx.textAlign = 'center';
+                const topOffset = valueLabelsOverlap ? 14 : 0;
+                const clampedX = clampTextX(x, boulderValueWidth);
+                ctx.fillText(boulderValueText, clampedX, chartArea.top - 8 + topOffset);
+            }
 
-            // Draw Pill Background
-            ctx.fillStyle = '#24243a';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(x - msgWidth / 2, tooltipY, msgWidth, msgHeight, 4);
-            ctx.fill();
-            ctx.stroke();
-
-            // Draw Text
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            // 4. Draw time label at bottom
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = '500 10px Inter';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(timeStr, x, tooltipY + msgHeight / 2);
+            const clampedTimeX = clampTextX(x, timeWidth);
+            ctx.fillText(timeStr, clampedTimeX, chartArea.bottom + 14);
+
             ctx.restore();
         }
     }
