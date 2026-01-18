@@ -170,26 +170,207 @@ function normalizeDayData(rawData, dateStr) {
 /**
  * Synchronizes tooltips across multiple charts
  */
-function syncTooltips(activeChart, tooltipModel) {
-    const dataIndex = tooltipModel.dataPoints?.[0]?.dataIndex;
-    if (dataIndex == null) return;
+/**
+ * Interpolates value between two points
+ */
+function interpolateValue(start, end, factor) {
+    if (start === null || end === null) return 0;
+    return start + (end - start) * factor;
+}
+
+/**
+ * Gets interpolated Lead/Boulder values for a specific timestamp
+ */
+function getInterpolatedValues(chart, timeValue) {
+    const time = new Date(timeValue).getTime();
+    const timestamps = chart.data.labels.map(d => d.getTime());
+
+    // Find enclosing timestamps
+    let index = -1;
+    for (let i = 0; i < timestamps.length - 1; i++) {
+        if (time >= timestamps[i] && time <= timestamps[i + 1]) {
+            index = i;
+            break;
+        }
+    }
+
+    // If not found (out of bounds), return null
+    if (index === -1) return null;
+
+    const tStart = timestamps[index];
+    const tEnd = timestamps[index + 1];
+    const range = tEnd - tStart;
+    const factor = range === 0 ? 0 : (time - tStart) / range;
+
+    const leadDataset = chart.data.datasets.find(d => d.label === 'Lead');
+    const boulderDataset = chart.data.datasets.find(d => d.label === 'Boulder');
+
+    if (!leadDataset || !boulderDataset) return null;
+
+    return {
+        lead: interpolateValue(leadDataset.data[index], leadDataset.data[index + 1], factor),
+        boulder: interpolateValue(boulderDataset.data[index], boulderDataset.data[index + 1], factor)
+    };
+}
+
+/**
+ * Custom Plugin for Interpolation & Sync
+ */
+const interpolationPlugin = {
+    id: 'interpolation',
+    afterInit: (chart) => {
+        chart.crosshair = { x: null, time: null, active: false };
+    },
+    afterEvent: (chart, args) => {
+        const { inChartArea } = args;
+        const { type, x, y } = args.event;
+
+        // Ensure crosshair object exists
+        if (!chart.crosshair) chart.crosshair = { x: null, time: null, active: false };
+
+        // We only care about mouse events for interaction
+        if ((type === 'mousemove' || type === 'mouseout') && inChartArea) {
+
+            if (type === 'mousemove') {
+                const time = chart.scales.x.getValueForPixel(x);
+                chart.crosshair = { x, time, active: true };
+
+                // Sync other charts
+                syncCharts(chart, time);
+            } else {
+                chart.crosshair = { active: false };
+                syncCharts(chart, null);
+            }
+
+            // Force redraw to update crosshair
+            chart.draw();
+        } else if (type === 'mouseout') {
+            chart.crosshair = { active: false };
+            syncCharts(chart, null);
+            chart.draw();
+        }
+    },
+    beforeDatasetsDraw: (chart) => {
+        const { ctx, chartArea, scales } = chart;
+
+        // Safety check
+        if (!chart.crosshair) return;
+
+        const { active, time } = chart.crosshair;
+
+        if (active && time) {
+            const x = scales.x.getPixelForValue(time);
+
+            // 1. Draw Vertical Line
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.moveTo(x, chartArea.top);
+            ctx.lineTo(x, chartArea.bottom);
+            ctx.stroke();
+            ctx.restore();
+
+            // 2. Draw Background Numbers (Interpolated)
+            const values = getInterpolatedValues(chart, time);
+
+            if (values) {
+                ctx.save();
+                ctx.textBaseline = 'middle';
+                const midY = (chartArea.top + chartArea.bottom) / 2;
+
+                // Align to edges with padding to prevent cutoff and maximize separation
+                const padding = chartArea.width * 0.05; // 5% padding
+
+                // Responsive font size
+                // Reduced width factor to 0.2 to ensure they fit side-by-side
+                const fontSize = Math.min(chartArea.height * 0.4, chartArea.width * 0.2, 60);
+                ctx.font = `700 ${fontSize}px Inter`;
+
+                // Lead Value (Left)
+                ctx.textAlign = 'left';
+                ctx.fillStyle = 'rgba(129, 140, 248, 0.4)';
+                ctx.fillText(`${Math.round(values.lead)}%`, chartArea.left + padding, midY);
+
+                // Boulder Value (Right)
+                ctx.textAlign = 'right';
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
+                ctx.fillText(`${Math.round(values.boulder)}%`, chartArea.right - padding, midY);
+
+                ctx.restore();
+            }
+
+            // 3. Draw Time Label (Tooltip) - Drawn LAST to be on top
+            ctx.save();
+            const timeStr = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            ctx.font = '500 12px Inter';
+            const textWidth = ctx.measureText(timeStr).width;
+            const msgPadding = 6;
+            const msgWidth = textWidth + msgPadding * 2;
+            const msgHeight = 20;
+            const tooltipY = chartArea.top - 22; // Position above chart area
+
+            // Draw Pill Background
+            ctx.fillStyle = '#24243a';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(x - msgWidth / 2, tooltipY, msgWidth, msgHeight, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw Text
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(timeStr, x, tooltipY + msgHeight / 2);
+            ctx.restore();
+        }
+    }
+};
+
+/**
+ * Synchronizes charts by Time of Day
+ */
+function syncCharts(sourceChart, time) {
+    // Extract time of day from source
+    let hours = 0, minutes = 0;
+    if (time) {
+        const d = new Date(time);
+        hours = d.getHours();
+        minutes = d.getMinutes();
+    }
 
     charts.forEach(chart => {
-        if (chart !== activeChart && !chart.destroyed) {
-            // Need to check if this chart actually has data at this index
-            const meta = chart.getDatasetMeta(0);
-            if (meta.data[dataIndex]) {
-                chart.setActiveElements([
-                    { datasetIndex: 0, index: dataIndex },
-                    { datasetIndex: 1, index: dataIndex }
-                ]);
-                chart.tooltip.setActiveElements([
-                    { datasetIndex: 0, index: dataIndex },
-                    { datasetIndex: 1, index: dataIndex }
-                ], { x: 0, y: 0 });
-                chart.update('none');
+        if (chart === sourceChart) return;
+        if (chart.destroyed) return;
+
+        // Ensure crosshair object exists before accessing it
+        if (!chart.crosshair) {
+            chart.crosshair = { x: null, time: null, active: false };
+        }
+
+        if (time === null) {
+            chart.crosshair = { active: false };
+        } else {
+            // Map to this chart's date
+            const minTime = chart.scales.x.min;
+            const targetDate = new Date(minTime);
+            targetDate.setHours(hours, minutes, 0, 0);
+            const targetTime = targetDate.getTime();
+
+            // Check if within bounds (gym hours)
+            if (targetTime >= chart.scales.x.min && targetTime <= chart.scales.x.max) {
+                chart.crosshair = {
+                    active: true,
+                    time: targetTime
+                };
+            } else {
+                chart.crosshair = { active: false };
             }
         }
+        chart.draw();
     });
 }
 
@@ -208,10 +389,10 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
                     borderColor: '#818cf8',
                     backgroundColor: 'rgba(129, 140, 248, 0.1)',
                     borderWidth: 2,
-                    fill: true,
+                    fill: true, // Fill area under line
                     tension: 0.4,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
+                    pointHoverRadius: 0, // No points on hover
                 },
                 {
                     label: 'Boulder',
@@ -222,47 +403,30 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
                     fill: true,
                     tension: 0.4,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
+                    pointHoverRadius: 0,
                 }
             ]
         },
         options: {
+            layout: {
+                padding: {
+                    top: 25
+                }
+            },
             responsive: true,
             maintainAspectRatio: false,
             interaction: {
-                mode: 'index',
+                mode: 'nearest',
+                axis: 'x',
                 intersect: false,
             },
             plugins: {
                 legend: {
-                    display: false // Hide legend to save space on small charts
+                    display: false
                 },
                 tooltip: {
-                    backgroundColor: '#24243a',
-                    titleColor: '#ffffff',
-                    bodyColor: '#a1a1b5',
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: true,
-                    // external: true, // We trigger syncing manually via onHover/interaction
-                    callbacks: {
-                        label: function (context) {
-                            return `${context.dataset.label}: ${context.parsed.y}%`;
-                        },
-                        title: function (context) {
-                            // Format time only
-                            const date = new Date(context[0].parsed.x);
-                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        }
-                    }
+                    enabled: false, // Disable default tooltip
                 }
-            },
-            onHover: (event, elements, chart) => {
-                // Trigger sync logic here if needed, but 'interaction' mode handles standard tooltips.
-                // For true external sync, we rely on the tooltip plugin's hooks or custom events.
-                // However, Chart.js doesn't have a simple 'onTooltipShow' event.
-                // A common workaround is hooking into the tooltip call.
             },
             scales: {
                 x: {
@@ -290,65 +454,16 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
                         color: 'rgba(255, 255, 255, 0.05)',
                     },
                     ticks: {
+                        display: false, // Cleaner look without Y axis labels? User asked for "clean solution". 
+                        // Actually let's keep them but maybe minimal. 
+                        // User said "tooltip are a bit too cluttering". Y axis is fine.
                         color: '#6b6b80',
                         callback: value => value + '%'
                     }
                 }
-            },
-            // Hook for external hook synchronization
-            plugins: {
-                tooltip: {
-                    // We override the internal hook to broadcast changes
-                    external: function (context) {
-                        // Default tooltip rendering is disabled if external is true,
-                        // but we want *both* default rendering AND custom syncing.
-                        // So we don't set external: true, but we could shim interaction logic.
-                        // Instead, we 'll try adding a custom plugin.
-                    }
-                }
             }
         },
-        plugins: [{
-            id: 'syncTooltip',
-            afterEvent: (chart, args) => {
-                if (args.event.type === 'mousemove' || args.event.type === 'mouseout') {
-                    // Start synchronization
-                    const activeElements = chart.getActiveElements();
-                    if (activeElements.length > 0) {
-                        // Find the data index
-                        const dataIndex = activeElements[0].index;
-
-                        // Sync to other charts
-                        charts.forEach(c => {
-                            if (c !== chart && !c.destroyed) {
-                                const meta = c.getDatasetMeta(0);
-                                // Only show if data index exists for this chart (handling potentially different lengths if not normalized identically)
-                                if (meta.data[dataIndex]) {
-                                    c.setActiveElements([
-                                        { datasetIndex: 0, index: dataIndex },
-                                        { datasetIndex: 1, index: dataIndex }
-                                    ]);
-                                    c.tooltip.setActiveElements([
-                                        { datasetIndex: 0, index: dataIndex },
-                                        { datasetIndex: 1, index: dataIndex }
-                                    ], { x: 0, y: 0 }); // coords ignored usually
-                                    c.update('none');
-                                }
-                            }
-                        });
-                    } else {
-                        // Clear other charts
-                        charts.forEach(c => {
-                            if (c !== chart && !c.destroyed) {
-                                c.setActiveElements([]);
-                                c.tooltip.setActiveElements([], { x: 0, y: 0 });
-                                c.update('none');
-                            }
-                        });
-                    }
-                }
-            }
-        }]
+        plugins: [interpolationPlugin]
     });
 }
 
