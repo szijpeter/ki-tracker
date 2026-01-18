@@ -227,7 +227,7 @@ const interpolationPlugin = {
     },
     afterEvent: (chart, args) => {
         const { inChartArea } = args;
-        const { type, x, y } = args.event;
+        const { type, x } = args.event;
 
         // Ensure crosshair object exists
         if (!chart.crosshair) chart.crosshair = { x: null, time: null, active: false };
@@ -400,8 +400,6 @@ function createDayChart(canvasCtx, dayData, minTime, maxTime) {
                     fill: true, // Fill area under line
                     tension: 0.4,
                     pointRadius: 0,
-                    tension: 0.4,
-                    pointRadius: 0,
                     pointHoverRadius: 0, // No points on hover
                     hidden: !visibleDatasets.lead
                 },
@@ -512,7 +510,6 @@ function renderSingleDayView(groupedData) {
 function renderTwoDayView(groupedData) {
     chartsContainer.className = 'charts-container two-day';
 
-    const sortedKeys = Object.keys(groupedData).sort().reverse();
     // We want today and yesterday. If today is missing (e.g. early morning), we might still want to show it?
     // Let's assume we always want Today + Yesterday
     const today = new Date();

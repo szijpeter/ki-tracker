@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { pruneOldData } from '../collect.js';
 
-test('pruneOldData removes entries older than maxDays', (t) => {
+test('pruneOldData removes entries older than maxDays', () => {
     const now = new Date();
     // Use fixed time to avoid flakiness with time boundaries if needed, 
     // but relative calculation usually fine
@@ -27,7 +27,7 @@ test('pruneOldData removes entries older than maxDays', (t) => {
     assert.strictEqual(result[1].val, 3);
 });
 
-test('pruneOldData handles empty arrays', (t) => {
+test('pruneOldData handles empty arrays', () => {
     const result = pruneOldData([], 7);
     assert.deepStrictEqual(result, []);
 });

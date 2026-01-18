@@ -4,9 +4,8 @@
  */
 
 import { scrapeOccupancy } from './scraper.js';
-import { readFile, writeFile, mkdir, rename } from 'fs/promises';
+import { readFile, writeFile, rename } from 'fs/promises';
 import { existsSync } from 'fs';
-import { dirname } from 'path';
 
 const DATA_FILE = './data/history.json';
 const MAX_DAYS = 7; // Keep 7 days of data
@@ -20,7 +19,7 @@ async function readHistory() {
         const content = await readFile(DATA_FILE, 'utf-8');
         const data = JSON.parse(content);
         return Array.isArray(data) ? data : [];
-    } catch (error) {
+    } catch {
         if (existsSync(DATA_FILE)) {
             const backupName = `${DATA_FILE}.corrupt.${Date.now()}`;
             console.error(`Status file corrupt, backing up to ${backupName}`);
