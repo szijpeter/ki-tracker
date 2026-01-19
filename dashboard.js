@@ -718,23 +718,43 @@ function calculateDailyMax(data, daysToInclude) {
  * @param {Array} dailyMaxData - Array of daily max data
  * @param {string} title - Chart title
  * @param {Function} onDayClick - Callback when a day is clicked
+ * @param {boolean} compactLabels - If true, show only dates without day names (for month view)
  */
-function createMaxChart(canvasCtx, dailyMaxData, title, onDayClick) {
+function createMaxChart(canvasCtx, dailyMaxData, title, onDayClick, compactLabels = false) {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const today = new Date().toISOString().split('T')[0];
 
-    // Create multi-line labels: Day name on line 1, date on line 2, TODAY on line 3 (for today only)
-    const labels = dailyMaxData.map(d => {
+    // Create labels based on view mode
+    const labels = dailyMaxData.map((d, index) => {
         const date = new Date(d.dateStr);
-        const dayName = daysOfWeek[date.getDay()];
         const dayNum = date.getDate();
+        const dayOfWeek = date.getDay();
         const month = date.toLocaleDateString([], { month: 'short' });
-        // For today: show day name, date, then TODAY on separate lines
-        if (d.dateStr === today) {
-            return [dayName, `${dayNum} ${month}`, 'TODAY'];
+
+        if (compactLabels) {
+            // For month view: show only date, include month for first entry and when month changes
+            const prevDate = index > 0 ? new Date(dailyMaxData[index - 1].dateStr) : null;
+            const showMonth = index === 0 || (prevDate && prevDate.getMonth() !== date.getMonth());
+
+            if (d.dateStr === today) {
+                return showMonth ? [`${dayNum}`, month, 'TODAY'] : [`${dayNum}`, 'TODAY'];
+            }
+            return showMonth ? [`${dayNum}`, month] : `${dayNum}`;
+        } else {
+            // For week view: full labels with day name
+            const dayName = daysOfWeek[dayOfWeek];
+            if (d.dateStr === today) {
+                return [dayName, `${dayNum} ${month}`, 'TODAY'];
+            }
+            return [dayName, `${dayNum} ${month}`];
         }
-        // For other days: day name on line 1, date on line 2
-        return [dayName, `${dayNum} ${month}`];
+    });
+
+    // Create array indicating which labels are weekends (for coloring)
+    const weekendIndices = dailyMaxData.map(d => {
+        const date = new Date(d.dateStr);
+        const dayOfWeek = date.getDay();
+        return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
     });
 
     const chart = new Chart(canvasCtx, {
@@ -804,7 +824,13 @@ function createMaxChart(canvasCtx, dailyMaxData, title, onDayClick) {
                     },
                     ticks: {
                         autoSkip: false,
-                        color: '#e0e0f0',
+                        color: (context) => {
+                            // Use warmer/orange color for weekends when in compact mode
+                            if (compactLabels && weekendIndices[context.index]) {
+                                return '#f59e0b'; // Amber/orange for weekends
+                            }
+                            return '#e0e0f0'; // Default color for weekdays
+                        },
                         font: {
                             weight: 600,
                             size: 10
@@ -1140,7 +1166,7 @@ function renderMaxMonthView(data) {
         }
     };
 
-    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 30 Days', onDayClick);
+    const chart = createMaxChart(canvas.getContext('2d'), dailyMaxData, 'Last 30 Days', onDayClick, true);
     charts.push(chart);
 }
 
