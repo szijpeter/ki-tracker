@@ -57,16 +57,21 @@ const HOURS = {
 };
 
 /**
- * Checks if the gym is currently open based on local time
+ * Checks if the gym is currently open based on Europe/Vienna time
+ * The gym is in Innsbruck, Austria (Europe/Vienna timezone)
  * @returns {boolean}
  */
 function isGymOpen(date = new Date()) {
-    const month = date.getMonth() + 1; // 1-12
-    const day = date.getDate();
+    // Convert to Vienna timezone to get accurate local time
+    const viennaTime = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Vienna' }));
+
+    const month = viennaTime.getMonth() + 1; // 1-12
+    const day = viennaTime.getDate();
     const key = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const hour = date.getHours();
+    const hour = viennaTime.getHours();
 
     const config = HOURS.exceptions[key] || HOURS.standard;
+    console.log(`Vienna time: ${viennaTime.toISOString().slice(0, 19)} (hour: ${hour}), Gym hours: ${config.start}-${config.end}`);
     return hour >= config.start && hour < config.end;
 }
 
