@@ -1591,5 +1591,12 @@
     "boulder": 95,
     "overall": 83,
     "openSectors": null
+  },
+  {
+    "timestamp": "2026-01-21T18:35:55.270Z",
+    "lead": 68,
+    "boulder": 91,
+    "overall": 80,
+    "openSectors": null
   }
 ]
