@@ -1,9 +1,9 @@
 {
-  "lastRun": "2026-01-21T11:45:34.328Z",
+  "lastRun": "2026-01-21T11:58:32.684Z",
   "success": true,
   "message": "Collection successful",
   "data": {
-    "timestamp": "2026-01-21T11:45:34.327Z",
+    "timestamp": "2026-01-21T11:58:32.683Z",
     "lead": 19,
     "boulder": 15,
     "overall": 17,
