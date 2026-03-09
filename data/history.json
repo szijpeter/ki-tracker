@@ -8066,5 +8066,12 @@
     "boulder": 0,
     "overall": 0,
     "openSectors": "0/0"
+  },
+  {
+    "timestamp": "2026-03-09T08:27:44.598Z",
+    "lead": 13,
+    "boulder": 6,
+    "overall": 10,
+    "openSectors": null
   }
 ]
