@@ -1,12 +1,12 @@
 {
-  "lastRun": "2026-03-31T09:16:47.688Z",
+  "lastRun": "2026-03-31T10:30:34.320Z",
   "success": true,
   "message": "Collection successful",
   "data": {
-    "timestamp": "2026-03-31T09:16:47.684Z",
-    "lead": 43,
-    "boulder": 34,
-    "overall": 39,
+    "timestamp": "2026-03-31T10:30:34.317Z",
+    "lead": 49,
+    "boulder": 35,
+    "overall": 42,
     "openSectors": null
   }
 }
