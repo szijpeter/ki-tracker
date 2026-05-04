@@ -1,12 +1,6 @@
 {
-  "lastRun": "2026-05-02T20:24:23.701Z",
-  "success": true,
-  "message": "Gym closed (0 recorded)",
-  "data": {
-    "timestamp": "2026-05-02T20:24:23.695Z",
-    "lead": 0,
-    "boulder": 0,
-    "overall": 0,
-    "openSectors": "0/0"
-  }
+  "lastRun": "2026-05-04T11:41:53.695Z",
+  "success": false,
+  "message": "Upstream scrape blocked temporarily: Failed to fetch main page: all attempts failed (https://www.kletterzentrum-innsbruck.at/en/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/en/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/de/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/de/ -> HTTP 403)",
+  "error": "Error: Failed to fetch main page: all attempts failed (https://www.kletterzentrum-innsbruck.at/en/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/en/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/de/ -> HTTP 403 | https://www.kletterzentrum-innsbruck.at/de/ -> HTTP 403)\n    at fetchMainPageHtml (file:///home/runner/work/ki-tracker/ki-tracker/scraper.js:81:9)\n    at async scrapeFromMainPage (file:///home/runner/work/ki-tracker/ki-tracker/scraper.js:133:16)\n    at async scrapeOccupancy (file:///home/runner/work/ki-tracker/ki-tracker/scraper.js:160:20)\n    at async collect (file:///home/runner/work/ki-tracker/ki-tracker/collect.js:93:23)\n    at async file:///home/runner/work/ki-tracker/ki-tracker/collect.js:186:9"
 }
