@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { parseOccupancyData } from '../scraper.js';
+import { parseMirrorOccupancy, parseOccupancyData } from '../scraper.js';
 
 test('parseOccupancyData extracts correct values from standard layout', () => {
     const html = `
@@ -48,4 +48,17 @@ test('parseOccupancyData handles german labels', () => {
     `;
     const result = parseOccupancyData(html);
     assert.strictEqual(result.lead, 80);
+});
+
+test('parseMirrorOccupancy extracts utilization and sectors from mirror markdown', () => {
+    const markdown = `
+Utilization 37%
+Some content here.
+[25/31](http://example.com)
+`;
+    const result = parseMirrorOccupancy(markdown);
+    assert.strictEqual(result.lead, 37);
+    assert.strictEqual(result.boulder, 37);
+    assert.strictEqual(result.overall, 37);
+    assert.strictEqual(result.openSectors, '25/31');
 });

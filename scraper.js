@@ -7,6 +7,7 @@ import * as cheerio from 'cheerio';
 
 const BASE_URL = 'https://www.kletterzentrum-innsbruck.at';
 const MAIN_PAGES = [`${BASE_URL}/en/`, `${BASE_URL}/`, `${BASE_URL}/de/`];
+const MIRROR_PAGE = 'https://r.jina.ai/http://www.kletterzentrum-innsbruck.at/en/';
 const AJAX_URL = `${BASE_URL}/wp-admin/admin-ajax.php`;
 const REQUEST_TIMEOUT_MS = 10000;
 const RETRY_DELAY_MS = 1200;
@@ -129,6 +130,33 @@ function hasOccupancyData(data) {
   return data.lead !== null || data.boulder !== null;
 }
 
+export function parseMirrorOccupancy(markdown) {
+  const overallMatch = markdown.match(/Utilization\s+(\d{1,3})%/i);
+  if (!overallMatch) {
+    throw new Error('Mirror fallback missing utilization percentage');
+  }
+
+  const overall = Number.parseInt(overallMatch[1], 10);
+  const sectorsMatch = markdown.match(/(\d+)\s*\/\s*(\d+)/);
+  return {
+    lead: overall,
+    boulder: overall,
+    overall,
+    openSectors: sectorsMatch ? `${sectorsMatch[1]}/${sectorsMatch[2]}` : null,
+  };
+}
+
+async function scrapeFromMirror() {
+  const response = await fetchWithTimeout(MIRROR_PAGE, {
+    headers: HEADER_PROFILES[0],
+  });
+  if (!response.ok) {
+    throw new Error(`Mirror request failed: ${response.status}`);
+  }
+  const markdown = await response.text();
+  return parseMirrorOccupancy(markdown);
+}
+
 async function scrapeFromMainPage() {
   const html = await fetchMainPageHtml();
   const data = parseOccupancyData(html);
@@ -153,7 +181,7 @@ async function scrapeFromMainPage() {
  * @returns {Promise<Object>} Complete occupancy data with timestamp
  */
 export async function scrapeOccupancy() {
-  let lastError;
+  let lastError = null;
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
@@ -170,7 +198,17 @@ export async function scrapeOccupancy() {
     }
   }
 
-  throw lastError;
+  try {
+    const data = await scrapeFromMirror();
+    return {
+      timestamp: new Date().toISOString(),
+      ...data,
+    };
+  } catch (mirrorError) {
+    throw new Error(
+      `Primary scraping failed (${lastError?.message || 'unknown'}); mirror fallback failed (${mirrorError.message})`
+    );
+  }
 }
 
 /**
