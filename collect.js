@@ -141,12 +141,15 @@ export async function collect() {
 
     } catch (error) {
         console.error('Collection process failed:', error);
+        const transientUpstreamError = isTransientUpstreamError(error);
 
         // Update status with error
         const status = {
             lastRun: new Date().toISOString(),
-            success: false,
-            message: error.message,
+            success: !transientUpstreamError,
+            message: transientUpstreamError
+                ? `Upstream scrape blocked temporarily: ${error.message}`
+                : error.message,
             error: error.stack
         };
 
@@ -156,8 +159,25 @@ export async function collect() {
             console.error('Failed to write failure status:', writeError);
         }
 
-        throw error; // Re-throw to ensure process exit code 1
+        if (transientUpstreamError) {
+            console.warn('Transient upstream scrape error detected; preserving workflow success and retrying on next schedule.');
+            return;
+        }
+
+        throw error; // Re-throw non-transient errors to ensure process exit code 1
     }
+}
+
+export function isTransientUpstreamError(error) {
+    const msg = String(error?.message || '').toLowerCase();
+    return (
+        msg.includes('403') ||
+        msg.includes('429') ||
+        msg.includes('failed to fetch main page') ||
+        msg.includes('fetch failed') ||
+        msg.includes('timeout') ||
+        msg.includes('aborterror')
+    );
 }
 
 // Run collection if executed directly

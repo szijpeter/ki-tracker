@@ -6,47 +6,93 @@
 import * as cheerio from 'cheerio';
 
 const BASE_URL = 'https://www.kletterzentrum-innsbruck.at';
-const MAIN_PAGE = `${BASE_URL}/en/`;
+const MAIN_PAGES = [`${BASE_URL}/en/`, `${BASE_URL}/`, `${BASE_URL}/de/`];
 const AJAX_URL = `${BASE_URL}/wp-admin/admin-ajax.php`;
+const REQUEST_TIMEOUT_MS = 10000;
+const RETRY_DELAY_MS = 1200;
 
-/**
- * Fetches the main page and extracts the WordPress nonce token
- * @returns {Promise<string>} The nonce token
- */
-async function extractNonce() {
-  // Add AbortController support for Node 16+ (global in 18+)
+const HEADER_PROFILES = [
+  {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    Accept:
+      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'de-AT,de;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache',
+    Referer: `${BASE_URL}/`,
+  },
+  {
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+    Accept:
+      'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache',
+    Referer: `${BASE_URL}/`,
+  },
+];
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(MAIN_PAGE, {
+    return await fetch(url, {
+      ...options,
       signal: controller.signal,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'text/html',
-      },
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch main page: ${response.status}`);
-    }
-
-    const html = await response.text();
-
-    // Look for ki_ajax object in the page's JavaScript
-    const nonceMatch = html.match(
-      /ki_ajax\s*=\s*\{[^}]*nonce["']?\s*:\s*["']([^"']+)["']/
-    );
-
-    if (!nonceMatch) {
-      throw new Error('Could not find nonce token in page');
-    }
-
-    return nonceMatch[1];
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+/**
+ * Fetches the main page and extracts the WordPress nonce token
+ * @returns {Promise<string>} The HTML content
+ */
+async function fetchMainPageHtml() {
+  const failures = [];
+
+  for (const pageUrl of MAIN_PAGES) {
+    for (const headers of HEADER_PROFILES) {
+      try {
+        const response = await fetchWithTimeout(pageUrl, { headers });
+        if (!response.ok) {
+          failures.push(`${pageUrl} -> HTTP ${response.status}`);
+          if (response.status === 403 || response.status === 429) {
+            await delay(RETRY_DELAY_MS);
+          }
+          continue;
+        }
+        return await response.text();
+      } catch (error) {
+        failures.push(`${pageUrl} -> ${error.name || 'Error'}`);
+        await delay(RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  throw new Error(
+    `Failed to fetch main page: all attempts failed (${failures.join(' | ')})`
+  );
+}
+
+function extractNonce(html) {
+  const nonceMatch = html.match(
+    /ki_ajax\s*=\s*\{[^}]*nonce["']?\s*:\s*["']([^"']+)["']/
+  );
+
+  if (!nonceMatch) {
+    throw new Error('Could not find nonce token in page');
+  }
+
+  return nonceMatch[1];
 }
 
 /**
@@ -55,34 +101,76 @@ async function extractNonce() {
  * @returns {Promise<string>} The HTML response
  */
 async function fetchOccupancyData(nonce) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
   const params = new URLSearchParams();
   params.append('action', 'ki_get_opening_hours_desktop');
   params.append('nonce', nonce);
 
-  try {
-    const response = await fetch(AJAX_URL, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-      body: params.toString(),
-    });
+  const headers = {
+    ...HEADER_PROFILES[0],
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'X-Requested-With': 'XMLHttpRequest',
+    Origin: BASE_URL,
+  };
 
-    if (!response.ok) {
-      throw new Error(`AJAX request failed: ${response.status}`);
-    }
+  const response = await fetchWithTimeout(AJAX_URL, {
+    method: 'POST',
+    headers,
+    body: params.toString(),
+  });
 
-    return response.text();
-  } finally {
-    clearTimeout(timeoutId);
+  if (!response.ok) {
+    throw new Error(`AJAX request failed: ${response.status}`);
   }
+
+  return response.text();
+}
+
+function hasOccupancyData(data) {
+  return data.lead !== null || data.boulder !== null;
+}
+
+async function scrapeFromMainPage() {
+  const html = await fetchMainPageHtml();
+  const data = parseOccupancyData(html);
+
+  if (hasOccupancyData(data)) {
+    return data;
+  }
+
+  const nonce = extractNonce(html);
+  const ajaxHtml = await fetchOccupancyData(nonce);
+  const ajaxData = parseOccupancyData(ajaxHtml);
+
+  if (hasOccupancyData(ajaxData)) {
+    return ajaxData;
+  }
+
+  throw new Error('Failed to parse occupancy data: No known selectors matched');
+}
+
+/**
+ * Main scraping function - fetches and parses current occupancy
+ * @returns {Promise<Object>} Complete occupancy data with timestamp
+ */
+export async function scrapeOccupancy() {
+  let lastError;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const data = await scrapeFromMainPage();
+      return {
+        timestamp: new Date().toISOString(),
+        ...data,
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        await delay(RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -152,25 +240,6 @@ export function parseOccupancyData(html) {
   }
 
   return result;
-}
-
-/**
- * Main scraping function - fetches and parses current occupancy
- * @returns {Promise<Object>} Complete occupancy data with timestamp
- */
-export async function scrapeOccupancy() {
-  const nonce = await extractNonce();
-  const html = await fetchOccupancyData(nonce);
-  const data = parseOccupancyData(html);
-
-  if (data.lead === null && data.boulder === null) {
-    throw new Error('Failed to parse occupancy data: No known selectors matched');
-  }
-
-  return {
-    timestamp: new Date().toISOString(),
-    ...data,
-  };
 }
 
 // Run directly if executed as main module

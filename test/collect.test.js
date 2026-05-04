@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { pruneOldData } from '../collect.js';
+import { isTransientUpstreamError, pruneOldData } from '../collect.js';
 
 test('pruneOldData removes entries older than maxDays', () => {
     const now = new Date();
@@ -30,4 +30,14 @@ test('pruneOldData removes entries older than maxDays', () => {
 test('pruneOldData handles empty arrays', () => {
     const result = pruneOldData([], 7);
     assert.deepStrictEqual(result, []);
+});
+
+test('isTransientUpstreamError detects upstream 403 blocks', () => {
+    const err = new Error('Failed to fetch main page: 403');
+    assert.strictEqual(isTransientUpstreamError(err), true);
+});
+
+test('isTransientUpstreamError does not hide parser/code errors', () => {
+    const err = new Error('Failed to parse occupancy data: No known selectors matched');
+    assert.strictEqual(isTransientUpstreamError(err), false);
 });
